@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marc Kimmel</title>
+<meta name="description" content="Marc Kimmel — design leader & builder.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--tq:#2FE8D5;--tq-deep:#0C9E99;--ink:#F2F7F7;--dim:#7F9299;--bg:#05080A;--accent:var(--tq)}
+body.light{--ink:#0C1416;--dim:#5A6E74;--bg:#E9EFEF;--accent:var(--tq-deep)}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:'Archivo',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  transition:background .6s ease,color .6s ease}
+
+/* funky element: cursor-reactive halftone dot grid */
+#fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+/* soft radial vignette, carried over from the Journey Line project */
+#scrim{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse 92% 80% at 50% 50%,rgba(5,8,10,0) 46%,rgba(5,8,10,.6) 100%)}
+body.light #scrim{background:radial-gradient(ellipse 92% 80% at 50% 50%,rgba(233,239,239,0) 46%,rgba(233,239,239,.65) 100%)}
+
+#stage{position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:0 7vw}
+
+.name{display:inline-block;white-space:nowrap;font-size:clamp(44px,11vw,150px);
+  font-weight:800;line-height:.9;letter-spacing:-.04em;text-shadow:0 4px 40px rgba(0,0,0,.5)}
+body.light .name{text-shadow:0 4px 40px rgba(255,255,255,.5)}
+#hero{cursor:none}
+
+.role{font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,1.05vw,14px);
+  letter-spacing:.36em;text-transform:uppercase;color:var(--dim);
+  display:inline-flex;align-items:center;gap:.85em;margin-bottom:clamp(14px,2.4vh,26px)}
+.role .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 12px var(--accent);animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+/* dynamic line: rewrites itself. Fixed 2-line height so nothing above ever moves. */
+.rewrite{height:2.8em;margin-top:clamp(10px,1.8vh,20px);
+  display:flex;align-items:flex-start;justify-content:center;
+  font-size:clamp(17px,2.5vw,30px);font-weight:500;line-height:1.4;
+  letter-spacing:-.01em;color:var(--ink);max-width:min(21ch,90vw)}
+.rewrite .scr{color:var(--accent);opacity:.9}
+.rewrite .cur{color:var(--accent);font-weight:400;opacity:.7;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* magnifying-glass lens over the name */
+#lens{position:fixed;width:190px;height:190px;border-radius:50%;overflow:hidden;
+  pointer-events:none;z-index:6;opacity:0;transition:opacity .18s ease;background:var(--bg);
+  box-shadow:0 0 0 2px rgba(47,232,213,.55),0 20px 54px rgba(0,0,0,.6),inset 0 0 46px rgba(47,232,213,.14)}
+#lens.on{opacity:1}
+#lens::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 36% 30%,rgba(255,255,255,.16),transparent 46%),
+             radial-gradient(circle at 50% 50%,transparent 60%,rgba(0,0,0,.28) 100%)}
+#lensText{position:absolute;transform-origin:0 0;color:var(--accent);
+  text-shadow:0 0 22px rgba(47,232,213,.35)}
+
+/* corner marks — mono, quiet */
+.corner{position:fixed;z-index:4;font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(10px,.9vw,12px);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);display:flex;align-items:center;gap:.62em}
+.corner svg{width:13px;height:13px;flex:none;opacity:.85}
+.corner a{color:inherit;text-decoration:none;transition:color .25s ease}
+.corner a:hover{color:var(--accent)}
+.tl{top:clamp(18px,3vh,34px);left:clamp(20px,3vw,48px)}
+.tr{top:clamp(18px,3vh,34px);right:clamp(20px,3vw,48px)}
+.bl{bottom:clamp(18px,3vh,34px);left:clamp(20px,3vw,48px)}
+.br{bottom:clamp(18px,3vh,34px);right:clamp(20px,3vw,48px)}
+.br{gap:clamp(10px,1.4vw,20px)}
+.sc{display:inline-flex;align-items:center;gap:.55em;white-space:nowrap}
+.sc kbd{display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;
+  padding:.32em .5em;border:1.5px solid currentColor;border-radius:6px;
+  font-family:inherit;font-size:.9em;line-height:1;opacity:.85}
+
+/* custom dot cursor, matching the source project */
+body,body *{cursor:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%3E%3Ccircle%20cx='12'%20cy='12'%20r='5'%20fill='%23000000'%20stroke='%23FFFFFF'%20stroke-opacity='0.6'%20stroke-width='1.5'/%3E%3C/svg%3E") 12 12,auto}
+a,.sc kbd{cursor:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%3E%3Ccircle%20cx='12'%20cy='12'%20r='9'%20fill='none'%20stroke='%232FE8D5'%20stroke-opacity='0.5'%20stroke-width='1.5'/%3E%3Ccircle%20cx='12'%20cy='12'%20r='4'%20fill='%232FE8D5'/%3E%3C/svg%3E") 12 12,pointer}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div id="scrim"></div>
+
+<!-- corners -->
+<div class="corner tl">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+  <span id="date">—</span>
+</div>
+<div class="corner tr">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.5s7-6.4 7-11.5a7 7 0 1 0-14 0c0 5.1 7 11.5 7 11.5z"/><circle cx="12" cy="10" r="2.6"/></svg>
+  <span>Vancouver</span>
+</div>
+<div class="corner bl">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>
+  <a href="mailto:mkimmel@gmail.com">mkimmel@gmail.com</a>
+</div>
+<div class="corner br">
+  <span class="sc"><kbd>L</kbd>Light</span>
+  <span class="sc"><kbd>Space</kbd>Shuffle</span>
+</div>
+
+<div id="stage">
+  <span class="role"><span class="dot"></span>Design leader &amp; builder</span>
+  <h1 class="name" id="hero">Marc Kimmel</h1>
+  <p class="rewrite" id="rw"></p>
+</div>
+
+<!-- the loupe -->
+<div id="lens"><span class="name" id="lensText">Marc Kimmel</span></div>
+
+<script>
+/* ================= live date (top-left) ================= */
+document.getElementById("date").textContent=
+  new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+
+/* ================= rewriting line (dynamic element #1) ================= */
+const PHRASES=[
+  "Prototyping AI-first experiences.",
+  "Making the future tangible.",
+  "Turning insight into momentum.",
+  "Designing with and for AI.",
+  "Behavioural science, made product.",
+  "Testable provocations, not vaporware.",
+  "Learning fast, before the dev cycles.",
+  "Tip of the spear."
+];
+const reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
+class Scramble{
+  constructor(el){this.el=el;this.glyphs="▓▒░/\\|<>*+=—·:";this.frameReq=0}
+  set(next){
+    const prev=this.el.dataset.text||"";
+    this.el.dataset.text=next;
+    return new Promise(res=>{
+      if(reduce){this.el.textContent=next;res();return}
+      this.resolve=res;
+      const len=Math.max(prev.length,next.length);
+      this.queue=[];
+      for(let i=0;i<len;i++){
+        const start=Math.floor(Math.random()*26);
+        const end=start+10+Math.floor(Math.random()*26);
+        this.queue.push({from:prev[i]||"",to:next[i]||"",start,end,char:""});
+      }
+      cancelAnimationFrame(this.frameReq);this.frame=0;this.tick();
+    });
+  }
+  tick(){
+    let out="",done=0;
+    for(const q of this.queue){
+      if(this.frame>=q.end){done++;out+=q.to}
+      else if(this.frame>=q.start){
+        if(!q.char||Math.random()<.28)q.char=this.glyphs[Math.floor(Math.random()*this.glyphs.length)];
+        out+=`<span class="scr">${q.char}</span>`;
+      }else out+=q.from;
+    }
+    this.el.innerHTML=out+(done<this.queue.length?'<span class="cur">▌</span>':"");
+    if(done===this.queue.length){this.resolve&&this.resolve()}
+    else{this.frame++;this.frameReq=requestAnimationFrame(()=>this.tick())}
+  }
+}
+const rw=document.getElementById("rw"),scr=new Scramble(rw);
+let idx=Math.floor(Math.random()*PHRASES.length);
+scr.set(PHRASES[idx]);
+function rotate(){
+  let n;do{n=Math.floor(Math.random()*PHRASES.length)}while(n===idx&&PHRASES.length>1);
+  idx=n;scr.set(PHRASES[idx]);
+}
+setInterval(rotate,4200);
+
+/* ================= funky element (#2): cursor-reactive halftone dot grid ================= */
+const fx=document.getElementById("fx"),fc=fx.getContext("2d");
+let W,H,DPR,mx=-1e4,my=-1e4,T=0;
+function sizeFx(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  fx.width=W*DPR;fx.height=H*DPR;fc.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener("resize",sizeFx);sizeFx();
+addEventListener("pointermove",e=>{mx=e.clientX;my=e.clientY});
+addEventListener("pointerleave",()=>{mx=my=-1e4});
+const GAP=34,RS=175;
+function accent(){return document.body.classList.contains("light")?[12,158,153]:[47,232,213]}
+function fxDraw(){
+  T++;fc.clearRect(0,0,W,H);
+  const[ar,ag,ab]=accent();
+  for(let y=GAP/2;y<H;y+=GAP)for(let x=GAP/2;x<W;x+=GAP){
+    const amb=.5+.5*Math.sin(T*.02+x*.028+y*.028);
+    const d=Math.hypot(x-mx,y-my),sp=Math.max(0,1-d/RS),spe=sp*sp;
+    const r=.7+amb*.5+spe*2.6, a=.05+amb*.05+spe*.6;
+    fc.beginPath();fc.arc(x,y,r,0,6.2832);
+    fc.fillStyle=`rgba(${ar},${ag},${ab},${a.toFixed(3)})`;fc.fill();
+  }
+  requestAnimationFrame(fxDraw);
+}
+fxDraw();
+
+/* ================= magnifying-glass loupe over the name ================= */
+const hero=document.getElementById("hero"),lens=document.getElementById("lens"),lensText=document.getElementById("lensText");
+const Z=1.9,LD=190,LR=LD/2;
+function moveLens(cx,cy){
+  const r=hero.getBoundingClientRect();
+  lens.style.left=(cx-LR)+"px";lens.style.top=(cy-LR)+"px";
+  lensText.style.left=(LR-(cx-r.left)*Z)+"px";
+  lensText.style.top=(LR-(cy-r.top)*Z)+"px";
+  lensText.style.transform="scale("+Z+")";
+}
+if(matchMedia("(hover:hover)").matches){
+  hero.addEventListener("pointerenter",()=>lens.classList.add("on"));
+  hero.addEventListener("pointerleave",()=>lens.classList.remove("on"));
+  hero.addEventListener("pointermove",e=>moveLens(e.clientX,e.clientY));
+}
+
+/* ================= keyboard shortcuts (bottom-right) ================= */
+addEventListener("keydown",e=>{
+  if(e.key==="l"||e.key==="L")document.body.classList.toggle("light");
+  if(e.code==="Space"){e.preventDefault();rotate()}
+});
+</script>
+</body>
+</html>
