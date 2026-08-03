@@ -48,6 +48,7 @@ body{background:var(--bg);color:var(--fg);cursor:none;
 .line{display:flex;justify-content:space-between;align-items:center;padding:0 2.2vw;line-height:.78;white-space:nowrap}
 .ltr{font-family:var(--ff);font-weight:var(--fw);font-size:min(41vh,23vw);color:var(--fg);
   display:inline-block;will-change:transform;flex:none}
+.ltr.ol{color:transparent;-webkit-text-stroke:3px var(--fg);text-stroke:3px var(--fg)}
 
 .msvg{position:absolute;inset:0;width:100%;height:100%;display:block}
 canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -61,9 +62,11 @@ canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 #cursor .ring{width:100%;height:100%;border-radius:50%;border:2px solid var(--fg);mix-blend-mode:difference}
 #cursor.PUSH{width:60px;height:60px;margin:-30px 0 0 -30px}
 #cursor.INVERT{opacity:0}
-#cursor.MELT .ring{border-radius:50%;background:var(--fg);border:none}
-#cursor.SPILL,#cursor.PAINT{width:14px;height:14px;margin:-7px 0 0 -7px}
-#cursor.SPILL .ring,#cursor.PAINT .ring{border-width:2px}
+#cursor.MELT .ring,#cursor.MAGNET .ring{border-radius:50%;background:var(--fg);border:none}
+#cursor.MAGNET{width:16px;height:16px;margin:-8px 0 0 -8px}
+#cursor.SPILL,#cursor.PAINT,#cursor.KALEIDO{width:14px;height:14px;margin:-7px 0 0 -7px}
+#cursor.SPILL .ring,#cursor.PAINT .ring,#cursor.KALEIDO .ring{border-width:2px}
+#cursor.SPOTLIGHT{width:44px;height:44px;margin:-22px 0 0 -22px}
 
 @media (prefers-reduced-motion:reduce){.mq-track{animation:none}}
 </style>
@@ -98,7 +101,11 @@ const PALS=[
  {bg:"#0A0A0A",fg:"#FFFFFF"},{bg:"#F2F0EA",fg:"#111111"},
  {bg:"#0A0A0A",fg:"#E8FF00"},{bg:"#111111",fg:"#FF3B3B"},
  {bg:"#1B1BFF",fg:"#FFFFFF"},{bg:"#FF3B3B",fg:"#111111"},
- {bg:"#E9EFEF",fg:"#05080A"},{bg:"#05080A",fg:"#2FE8D5"}
+ {bg:"#E9EFEF",fg:"#05080A"},{bg:"#05080A",fg:"#2FE8D5"},
+ {bg:"#0A0A0A",fg:"#FF5AF2"},{bg:"#FFE600",fg:"#0A0A0A"},
+ {bg:"#0033FF",fg:"#FFFFFF"},{bg:"#00FF9C",fg:"#05140F"},
+ {bg:"#1A1A1A",fg:"#FF6A00"},{bg:"#FF2D55",fg:"#FFFFFF"},
+ {bg:"#101010",fg:"#B14BF4"},{bg:"#EDEAE2",fg:"#E5322D"}
 ];
 const FONTS=[{f:"'Anton'",w:400},{f:"'Archivo'",w:800},{f:"'Fraunces'",w:900},{f:"'Space Mono'",w:700}];
 const rnd=(a=1,b=0)=>b+Math.random()*(a-b),pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -118,10 +125,12 @@ ptrLoop();
 const sy=()=>py-34;
 
 function sizeCanvas(cv){cv.width=W*DPR;cv.height=H*DPR}
+function fitScale(ctx,txt,target){const w=ctx.measureText(txt).width;return w>0?target/w:1}
+let curTreat="solid";/* solid | outline — random per version, adds typography-style variety */
 
 /* text as individual letters (DOM) */
-function domLetters(){
- stage.innerHTML=`<div class="lines"><div class="line">${[...'MARC'].map(c=>`<span class="ltr">${c}</span>`).join("")}</div><div class="line">${[...'KIMMEL'].map(c=>`<span class="ltr">${c}</span>`).join("")}</div></div>`;
+function domLetters(){const ol=curTreat==="outline"?" ol":"";
+ stage.innerHTML=`<div class="lines"><div class="line">${[...'MARC'].map(c=>`<span class="ltr${ol}">${c}</span>`).join("")}</div><div class="line">${[...'KIMMEL'].map(c=>`<span class="ltr${ol}">${c}</span>`).join("")}</div></div>`;
  return [...stage.querySelectorAll('.ltr')];
 }
 /* text as fitted SVG (fills width) */
@@ -151,7 +160,8 @@ const MODES=[
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick);stage.classList.remove("inverted")};
 }},
 {id:"MELT",tip:"Move to melt the type",mount(pal,fo){
-  stage.innerHTML=`<svg class="msvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice"><defs><filter id="mp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.009 0.016" numOctaves="2" seed="${Math.floor(rnd(200))}" result="n"><animate attributeName="baseFrequency" dur="14s" values="0.007 0.014;0.015 0.01;0.007 0.014" repeatCount="indefinite"/></feTurbulence><feDisplacementMap id="dm" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></defs><g filter="url(#mp)" font-family="${fo.f}" font-weight="${fo.w}" text-anchor="middle" fill="${pal.fg}"><text x="${W/2}" y="${H*0.44}" font-size="${H*0.5}" textLength="${W*0.94}" lengthAdjust="spacingAndGlyphs">MARC</text><text x="${W/2}" y="${H*0.95}" font-size="${H*0.5}" textLength="${W*0.94}" lengthAdjust="spacingAndGlyphs">KIMMEL</text></g></svg>`;
+  const tv=curTreat==="outline"?`fill="none" stroke="${pal.fg}" stroke-width="${Math.max(2,H*0.006).toFixed(1)}"`:`fill="${pal.fg}"`;
+  stage.innerHTML=`<svg class="msvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice"><defs><filter id="mp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.009 0.016" numOctaves="2" seed="${Math.floor(rnd(200))}" result="n"><animate attributeName="baseFrequency" dur="14s" values="0.007 0.014;0.015 0.01;0.007 0.014" repeatCount="indefinite"/></feTurbulence><feDisplacementMap id="dm" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></defs><g filter="url(#mp)" font-family="${fo.f}" font-weight="${fo.w}" text-anchor="middle" ${tv}><text x="${W/2}" y="${H*0.44}" font-size="${H*0.5}" textLength="${W*0.94}" lengthAdjust="spacingAndGlyphs">MARC</text><text x="${W/2}" y="${H*0.95}" font-size="${H*0.5}" textLength="${W*0.94}" lengthAdjust="spacingAndGlyphs">KIMMEL</text></g></svg>`;
   const dm=stage.querySelector("#dm");let cur=0,raf;
   (function loop(){const t=pactive?Math.min(160,30+pspeed*5):0;cur+=(t-cur)*0.12;dm.setAttribute("scale",cur.toFixed(1));raf=requestAnimationFrame(loop)})();
   return ()=>cancelAnimationFrame(raf);
@@ -162,20 +172,20 @@ const MODES=[
   const pileC=stage.querySelector(".pile"),actC=stage.querySelector(".act");
   const pcx=pileC.getContext("2d"),acx=actC.getContext("2d");sizeCanvas(pileC);sizeCanvas(actC);
   const ff=fo.f.replace(/'/g,""),glyphs=[..."MARCKIMMEL"];
-  const binW=22,bins=Math.max(1,Math.ceil(W/binW)),floor=new Float32Array(bins);/* pile height per column */
-  const SIZES=[[12,22],[22,38],[40,66]];let si=1;                                /* click cycles spill size */
-  const parts=[];let raf,frame=0,total=0;const MAX=1500;
+  const binW=26,bins=Math.max(1,Math.ceil(W/binW)),floor=new Float32Array(bins);/* pile height per column */
+  const SIZES=[[30,70],[64,130],[120,230]];let si=1;                             /* click cycles spill size — big & varied */
+  const parts=[];let raf,frame=0,total=0;const MAX=3000;
   const onClick=()=>{si=(si+1)%SIZES.length};stage.addEventListener("click",onClick);
   function stamp(p){pcx.setTransform(DPR,0,0,DPR,0,0);pcx.fillStyle=pal.fg;pcx.textAlign="center";pcx.textBaseline="middle";
     pcx.save();pcx.font=`${fo.w} ${p.s.toFixed(0)}px ${ff},sans-serif`;pcx.translate(p.x,p.y);pcx.rotate(p.r);pcx.fillText(p.ch,0,0);pcx.restore()}
   (function loop(){frame++;
-    /* slow, movement-driven spill */
-    if(pactive&&pspeed>0.5&&total<MAX&&frame%5===0){const[a,b]=SIZES[si];
-      parts.push({x:Math.max(6,Math.min(W-6,px)),y:sy(),vx:rnd(1,-1),vy:rnd(1.4,0),
-        ch:pick(glyphs),r:rnd(.5,-.5),vr:rnd(.06,-.06),s:a+rnd(b-a)});total++}
+    /* fast, movement-driven spill — a hard sweep can fill the screen in ~5s */
+    if(pactive&&pspeed>0.5&&total<MAX&&frame%2===0){const[a,b]=SIZES[si];
+      for(let n=0;n<5;n++)parts.push({x:Math.max(6,Math.min(W-6,px+rnd(70,-70))),y:sy()+rnd(30,-30),vx:rnd(2.5,-2.5),vy:rnd(2.5,0),
+        ch:pick(glyphs),r:rnd(.6,-.6),vr:rnd(.08,-.08),s:a+rnd(b-a)});total+=5}
     acx.setTransform(1,0,0,1,0,0);acx.clearRect(0,0,actC.width,actC.height);
     acx.setTransform(DPR,0,0,DPR,0,0);acx.fillStyle=pal.fg;acx.textAlign="center";acx.textBaseline="middle";
-    for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.vy+=0.16;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
+    for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.vy+=0.5;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
       let bin=Math.max(0,Math.min(bins-1,Math.round(p.x/binW)));
       const bl=bin>0?floor[bin-1]:1e9,br=bin<bins-1?floor[bin+1]:1e9,here=floor[bin];/* roll to a lower neighbour */
       if(bl<here-p.s*0.4&&bl<=br)bin--;else if(br<here-p.s*0.4)bin++;
@@ -193,6 +203,71 @@ const MODES=[
     if(pactive&&pspeed>0.5){cx.strokeStyle=pal.fg;cx.lineCap="round";cx.lineWidth=Math.min(46,2+pspeed*0.9)*DPR;
       cx.beginPath();cx.moveTo(lx*DPR,ly*DPR);cx.lineTo(px*DPR,sy()*DPR);cx.stroke()}
     lx=px;ly=sy();raf=requestAnimationFrame(loop)})();
+  return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
+}},
+/* ---- MAGNET: letters are sucked toward the cursor and clump ---- */
+{id:"MAGNET",tip:"Letters chase your cursor",mount(pal,fo){
+  const L=domLetters();
+  const S=L.map(el=>{const r=el.getBoundingClientRect();return{el,hx:r.left+r.width/2,hy:r.top+r.height/2,x:0,y:0,vx:0,vy:0,r:0,vr:0}});
+  let raf;(function loop(){
+    for(const s of S){const cx=s.hx+s.x,cy=s.hy+s.y;let fx=-s.x*0.02,fy=-s.y*0.02;
+      if(pactive){const dx=px-cx,dy=py-cy,d=Math.hypot(dx,dy)||1,f=Math.min(34,900/d);
+        fx+=dx/d*f;fy+=dy/d*f;s.vr+=(Math.random()-0.5)*2}
+      s.vx=(s.vx+fx)*0.9;s.vy=(s.vy+fy)*0.9;s.x+=s.vx;s.y+=s.vy;s.vr*=0.9;s.r+=s.vr*0.1;
+      s.el.style.transform=`translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px) rotate(${s.r.toFixed(1)}deg)`}
+    raf=requestAnimationFrame(loop)})();
+  return ()=>cancelAnimationFrame(raf);
+}},
+/* ---- WAVE: the wordmark ripples; the swell follows your cursor ---- */
+{id:"WAVE",tip:"Send waves through the type",mount(pal,fo){
+  const L=domLetters(),S=L.map(el=>{const r=el.getBoundingClientRect();return{el,cx:r.left+r.width/2}});
+  let raf,t=0;(function loop(){t+=0.05;const mxp=pactive?px:innerWidth/2;
+    for(const s of S){const infl=Math.max(0,1-Math.abs(mxp-s.cx)/520),amp=18+infl*100,ph=t*2-s.cx*0.012;
+      s.el.style.transform=`translateY(${(Math.sin(ph)*amp).toFixed(1)}px) rotate(${(Math.cos(ph)*infl*16).toFixed(1)}deg)`}
+    raf=requestAnimationFrame(loop)})();
+  return ()=>cancelAnimationFrame(raf);
+}},
+/* ---- GLITCH: horizontal datamosh slices; move fast to shatter ---- */
+{id:"GLITCH",tip:"Move fast to shatter",mount(pal,fo){
+  const ff=fo.f.replace(/'/g,""),off=document.createElement("canvas");off.width=W*DPR;off.height=H*DPR;
+  const ox=off.getContext("2d");ox.setTransform(DPR,0,0,DPR,0,0);ox.fillStyle=pal.fg;ox.textAlign="center";ox.textBaseline="alphabetic";
+  ox.font=`${fo.w} ${(H*0.5).toFixed(0)}px ${ff},sans-serif`;
+  ox.save();ox.translate(W/2,H*0.44);ox.scale(fitScale(ox,"MARC",W*0.94),1);ox.fillText("MARC",0,0);ox.restore();
+  ox.save();ox.translate(W/2,H*0.95);ox.scale(fitScale(ox,"KIMMEL",W*0.94),1);ox.fillText("KIMMEL",0,0);ox.restore();
+  stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
+  const bands=52,bh=H/bands;let raf,t=0;(function loop(){t++;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);
+    const amp=pactive?Math.min(140,8+pspeed*7):6;
+    for(let b=0;b<bands;b++){const y=b*bh,o=(Math.sin(t*0.18+b*0.7)+Math.sin(b*2.3))*amp*(Math.random()<0.15?rnd(2,-2):0.5);
+      cx.drawImage(off,0,y*DPR,W*DPR,bh*DPR,o*DPR,y*DPR,W*DPR,bh*DPR)}
+    raf=requestAnimationFrame(loop)})();
+  return ()=>cancelAnimationFrame(raf);
+}},
+/* ---- SPOTLIGHT: the screen is dark; your cursor is the only light ---- */
+{id:"SPOTLIGHT",tip:"Your cursor is the only light",mount(pal,fo){
+  stage.innerHTML=svgText(fo,pal.fg)+`<canvas class="play"></canvas>`;
+  const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);const R=210;
+  const onClick=()=>stage.classList.toggle("inverted");stage.addEventListener("click",onClick);
+  let raf;(function loop(){cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);
+    cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);
+    const gx=px*DPR,gy=sy()*DPR,g=cx.createRadialGradient(gx,gy,0,gx,gy,R*DPR);
+    g.addColorStop(0,"#000");g.addColorStop(.68,"#000");g.addColorStop(1,"rgba(0,0,0,0)");
+    cx.globalCompositeOperation="destination-out";cx.fillStyle=g;cx.beginPath();cx.arc(gx,gy,R*DPR,0,7);cx.fill();
+    cx.globalCompositeOperation="source-over";raf=requestAnimationFrame(loop)})();
+  return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick);stage.classList.remove("inverted")};
+}},
+/* ---- KALEIDO: your cursor paints a mirrored, radial mandala ---- */
+{id:"KALEIDO",tip:"Move to paint a kaleidoscope · Click clears",mount(pal,fo){
+  stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
+  cx.setTransform(DPR,0,0,DPR,0,0);cx.lineCap="round";
+  const seg=pick([6,8,10,12]),cxc=W/2,cyc=H/2;let raf,lx=px-cxc,ly=sy()-cyc;
+  function sym(a,x0,y0,x1,y1,mir){const c=Math.cos(a),s=Math.sin(a),m=mir?-1:1;
+    cx.beginPath();cx.moveTo(cxc+x0*c-m*y0*s,cyc+x0*s+m*y0*c);cx.lineTo(cxc+x1*c-m*y1*s,cyc+x1*s+m*y1*c);cx.stroke()}
+  const onClick=()=>{cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0)};
+  stage.addEventListener("click",onClick);
+  (function loop(){const x=px-cxc,y=sy()-cyc;
+    if(pactive&&pspeed>0.5){cx.strokeStyle=pal.fg;cx.lineWidth=Math.min(26,2+pspeed*0.6);
+      for(let k=0;k<seg;k++){const a=k*6.2832/seg;sym(a,lx,ly,x,y,false);sym(a,lx,ly,x,y,true)}}
+    lx=x;ly=y;raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }}
 ];
@@ -213,6 +288,7 @@ function build(step){
  idx=(idx+1)%1000;
  let m;do{m=Math.floor(Math.random()*MODES.length)}while(m===lastMode&&MODES.length>1);lastMode=m;
  const mode=MODES[m],pal=pick(PALS),fo=pick(FONTS);
+ curTreat=pick(["solid","solid","solid","outline"]);/* random typography treatment, independent of mode/palette/font */
  body.style.setProperty("--bg",pal.bg);body.style.setProperty("--fg",pal.fg);
  body.style.setProperty("--ff",fo.f.replace(/'/g,""));body.style.setProperty("--fw",fo.w);
  cursorEl.className=mode.id;
@@ -220,7 +296,7 @@ function build(step){
  readout.textContent=`Idx ${String(idx+1).padStart(2,"0")} · ${mode.id} — ${mode.tip}`;
  if(step)transition();
 }
-function schedule(){clearTimeout(timer);timer=setTimeout(()=>{build(true);schedule()},reduce?14000:7000)}
+function schedule(){clearTimeout(timer);timer=setTimeout(()=>{build(true);schedule()},reduce?16000:9000)}
 
 build(false);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>build(false));
