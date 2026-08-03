@@ -55,8 +55,8 @@ body{background:var(--bg);color:var(--fg);cursor:none;
 .msvg{position:absolute;inset:0;width:100%;height:100%;display:block}
 canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 
-.invlens{position:fixed;width:448px;height:448px;border-radius:50%;background:#fff;
-  mix-blend-mode:difference;pointer-events:none;z-index:20;margin:-224px 0 0 -224px;will-change:transform}
+.invlens{position:fixed;width:720px;height:720px;border-radius:50%;background:#fff;
+  mix-blend-mode:difference;pointer-events:none;z-index:20;margin:-360px 0 0 -360px;will-change:transform}
 
 /* ---- custom cursor ---- */
 #cursor{position:fixed;left:0;top:0;z-index:60;pointer-events:none;will-change:transform;
@@ -68,7 +68,8 @@ canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 #cursor.MAGNET{width:16px;height:16px;margin:-8px 0 0 -8px}
 #cursor.SPILL,#cursor.KALEIDO{width:14px;height:14px;margin:-7px 0 0 -7px}
 #cursor.SPILL .ring,#cursor.KALEIDO .ring{border-width:2px}
-#cursor.SPOTLIGHT,#cursor.SCRATCH{width:57px;height:57px;margin:-28.5px 0 0 -28.5px}
+#cursor.SPOTLIGHT{width:57px;height:57px;margin:-28.5px 0 0 -28.5px}
+#cursor.SCRATCH{width:114px;height:114px;margin:-57px 0 0 -57px}
 
 @media (prefers-reduced-motion:reduce){.mq-track{animation:none}}
 </style>
@@ -79,7 +80,7 @@ canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 <div id="stage"></div>
 <div id="cursor"><div class="ring"></div></div>
 <footer id="bar">
-  <a href="mailto:mkimmel@gmail.com">mkimmel@gmail.com</a>
+  <span>mkimmel@gmail.com</span>
   <span id="readout">—</span>
   <span class="right"><span id="next">Space · Next ↘</span><span>Vancouver · <span id="date">—</span></span></span>
 </footer>
@@ -134,9 +135,10 @@ function makeFavicon(){const p=pick(PALS);
 makeFavicon();setInterval(makeFavicon,2200);
 
 /* ---- global pointer + custom cursor ---- */
-let px=innerWidth/2,py=innerHeight/2,ppx=px,ppy=py,pspeed=0,pactive=false;
+let px=innerWidth/2,py=innerHeight/2,ppx=px,ppy=py,pspeed=0,pactive=false,pdown=false;
 addEventListener("pointermove",e=>{px=e.clientX;py=e.clientY;pactive=true});
-addEventListener("pointerdown",e=>{px=e.clientX;py=e.clientY;pactive=true});
+addEventListener("pointerdown",e=>{px=e.clientX;py=e.clientY;pactive=true;pdown=true});
+addEventListener("pointerup",()=>{pdown=false});
 document.addEventListener("mouseleave",()=>pactive=false);
 let mvF=0;
 function ptrLoop(){pspeed=pspeed*0.75+Math.hypot(px-ppx,py-ppy)*0.25;ppx=px;ppy=py;
@@ -149,6 +151,7 @@ const sy=()=>py-34;
 
 function sizeCanvas(cv){cv.width=W*DPR;cv.height=H*DPR}
 function fitScale(ctx,txt,target){const w=ctx.measureText(txt).width;return w>0?target/w:1}
+function shade(hex,amt){hex=hex.replace("#","");const c=[0,2,4].map(i=>Math.max(0,Math.min(255,parseInt(hex.slice(i,i+2),16)+amt)));return`rgb(${c[0]},${c[1]},${c[2]})`}
 let curTreat="solid";/* solid | outline — random per version, adds typography-style variety */
 
 /* text as individual letters (DOM) */
@@ -219,7 +222,7 @@ const MODES=[
   const ff=fo.f.replace(/'/g,""),glyphs=[..."MARCKIMMEL"];
   const binW=26,bins=Math.max(1,Math.ceil(W/binW)),floor=new Float32Array(bins);/* pile height per column */
   const SIZES=[[40,90],[80,170],[150,290]];let si=1;                             /* click cycles spill size — big & varied */
-  const parts=[];let raf,frame=0,total=0;const MAX=3000;
+  const parts=[];let raf,frame=0,total=0,seq=0;const MAX=3000;
   const onClick=()=>{si=(si+1)%SIZES.length};stage.addEventListener("click",onClick);
   function stamp(p){pcx.setTransform(DPR,0,0,DPR,0,0);pcx.fillStyle=pal.fg;pcx.textAlign="center";pcx.textBaseline="middle";
     pcx.save();pcx.font=`${fo.w} ${p.s.toFixed(0)}px ${ff},sans-serif`;pcx.translate(p.x,p.y);pcx.rotate(p.r);pcx.fillText(p.ch,0,0);pcx.restore()}
@@ -227,7 +230,7 @@ const MODES=[
     /* fast, movement-driven spill — a hard sweep can fill the screen in ~5s */
     if(pactive&&pspeed>0.5&&total<MAX&&frame%9===0){const[a,b]=SIZES[si];/* sparse spew — one letter at a time so each shape reads */
       parts.push({x:Math.max(6,Math.min(W-6,px+rnd(24,-24))),y:sy()+rnd(12,-12),vx:rnd(2,-2),vy:rnd(2,-3),
-        ch:pick(glyphs),r:rnd(.6,-.6),vr:rnd(.12,-.12),s:a+rnd(b-a),b:0});total++}
+        ch:glyphs[seq++%glyphs.length],r:rnd(.6,-.6),vr:rnd(.12,-.12),s:a+rnd(b-a),b:0});total++}/* spill in name order: M A R C K I M M E L … */
     acx.setTransform(1,0,0,1,0,0);acx.clearRect(0,0,actC.width,actC.height);
     acx.setTransform(DPR,0,0,DPR,0,0);acx.fillStyle=pal.fg;acx.textAlign="center";acx.textBaseline="middle";
     for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.vy+=0.35;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
@@ -255,22 +258,27 @@ const MODES=[
   cover();let raf,lx=px,ly=sy();
   const onClick=()=>cover();stage.addEventListener("click",onClick);
   (function loop(){
-    if(pactive&&pspeed>0.3){cx.globalCompositeOperation="destination-out";cx.lineCap="round";cx.lineJoin="round";
-      cx.lineWidth=Math.min(83,29+pspeed*1.7)*DPR;
-      cx.beginPath();cx.moveTo(lx*DPR,ly*DPR);cx.lineTo(px*DPR,sy()*DPR);cx.stroke()}
+    if(pactive&&pspeed>0.3){cx.globalCompositeOperation="destination-out";cx.setTransform(1,0,0,1,0,0);
+      const dx=px-lx,dy=sy()-ly,dist=Math.hypot(dx,dy),steps=Math.max(1,Math.ceil(dist/4)),BR=60;
+      for(let s=0;s<=steps;s++){const tt=s/steps,cxp=lx+dx*tt,cyp=ly+dy*tt;/* scratch off in irregular, organic flakes — not circles */
+        for(let d=0;d<8;d++){const a=rnd(6.2832),rr=rnd(BR)*Math.sqrt(rnd(1)),fx=cxp+Math.cos(a)*rr,fy=cyp+Math.sin(a)*rr,sides=4+Math.floor(rnd(5)),base=rnd(14,4),rot=rnd(6.2832);
+          cx.beginPath();
+          for(let k=0;k<sides;k++){const ang=rot+k/sides*6.2832,rad=base*(0.35+rnd(1.2)),X=(fx+Math.cos(ang)*rad)*DPR,Y=(fy+Math.sin(ang)*rad)*DPR;k?cx.lineTo(X,Y):cx.moveTo(X,Y)}
+          cx.closePath();cx.fill()}}
+      cx.globalCompositeOperation="source-over"}
     lx=px;ly=sy();raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
 /* ---- MAGNET: letters are sucked toward the cursor and clump ---- */
-{id:"MAGNET",tip:"Letters chase your cursor",mount(pal,fo){
+{id:"MAGNET",tip:"Drag the letters around — they stay where you leave them",mount(pal,fo){
   const L=domLetters();
   const S=L.map(el=>{const r=el.getBoundingClientRect();return{el,hx:r.left+r.width/2,hy:r.top+r.height/2,x:0,y:0,vx:0,vy:0,r:0,vr:0}});
   let raf;(function loop(){
-    for(const s of S){const cx=s.hx+s.x,cy=s.hy+s.y;let fx=-s.x*0.02,fy=-s.y*0.02;
-      if(pactive){const dx=px-cx,dy=py-cy,d=Math.hypot(dx,dy)||1,f=Math.min(34,900/d);
-        fx+=dx/d*f;fy+=dy/d*f;s.vr+=(Math.random()-0.5)*2}
-      s.vx=(s.vx+fx)*0.9;s.vy=(s.vy+fy)*0.9;s.x+=s.vx;s.y+=s.vy;s.vr*=0.9;s.r+=s.vr*0.1;
-      s.el.style.transform=`translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px) rotate(${s.r.toFixed(1)}deg)`}
+    for(const s of S){const cx=s.hx+s.x,cy=s.hy+s.y;let fx=0,fy=0;/* no spring home — letters stay put */
+      if(pactive){const dx=px-cx,dy=py-cy,d=Math.hypot(dx,dy)||1;
+        if(d<230){const f=Math.min(20,900/d);fx+=dx/d*f;fy+=dy/d*f}}/* sweep the cursor to drag nearby letters along — gentler pull, no shake */
+      s.vx=(s.vx+fx)*0.82;s.vy=(s.vy+fy)*0.82;s.x+=s.vx;s.y+=s.vy;
+      s.el.style.transform=`translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px)`}
     raf=requestAnimationFrame(loop)})();
   return ()=>cancelAnimationFrame(raf);
 }},
@@ -314,15 +322,22 @@ const MODES=[
 /* ---- KALEIDO: the name is fully visible; moving the cursor jumbles it into a kaleidoscope ---- */
 {id:"KALEIDO",tip:"Move to kaleidoscope the name · Click resets",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
-  const off=nameCanvas(fo,pal.fg),seg=pick([6,8,10,12]),ang=6.2832/seg,cxc=W/2,cyc=H/2;
-  function base(){cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);
-    cx.setTransform(DPR,0,0,DPR,0,0);cx.drawImage(off,0,0,off.width,off.height,0,0,W,H)}
-  base();const onClick=()=>base();stage.addEventListener("click",onClick);
-  let raf;(function loop(){
-    if(pactive&&pspeed>0.5){const R=90;
-      for(let k=0;k<seg;k++)for(const m of [1,-1]){cx.save();cx.setTransform(DPR,0,0,DPR,0,0);
-        cx.translate(cxc,cyc);cx.rotate(k*ang);cx.scale(1,m);cx.translate(-cxc,-cyc);
-        cx.beginPath();cx.arc(px,sy(),R,0,7);cx.clip();cx.drawImage(off,0,0,off.width,off.height,0,0,W,H);cx.restore()}}
+  const VIV=["#FF3B3B","#2FE8D5","#FFD23F","#B14BF4","#FF5AF2","#C6FF00","#3D6BFF","#00E1D4"];
+  const lum=x=>{x=x.replace("#","");return(0.299*parseInt(x.slice(0,2),16)+0.587*parseInt(x.slice(2,4),16)+0.114*parseInt(x.slice(4,6),16))/255};
+  const lf=lum(pal.fg),acc=pick(VIV.slice().sort((a,b)=>Math.abs(lum(b)-lf)-Math.abs(lum(a)-lf)).slice(0,3)),offB=nameCanvas(fo,acc),nameW=nameCanvas(fo,"#fff");
+  const kal=document.createElement("canvas");kal.width=W*DPR;kal.height=H*DPR;const kcx=kal.getContext("2d");/* kaleidoscope accumulates here */
+  const seg=pick([6,8,10,12]),ang=6.2832/seg,cxc=W/2,cyc=H/2;
+  const onClick=()=>kcx.clearRect(0,0,kal.width,kal.height);stage.addEventListener("click",onClick);
+  let raf,t=0;(function loop(){t++;
+    if(pactive&&pspeed>0.5){const R=80+30*Math.sin(t*0.05),spin=t*0.02;kcx.filter=`hue-rotate(${t*4%360}deg)`;/* ever-shifting colours + slowly turning wedges → infinite fresh shapes */
+      for(let k=0;k<seg;k++)for(const m of [1,-1]){kcx.save();kcx.setTransform(DPR,0,0,DPR,0,0);
+        kcx.translate(cxc,cyc);kcx.rotate(k*ang+spin);kcx.scale(1,m);kcx.translate(-cxc,-cyc);
+        kcx.beginPath();kcx.arc(px,sy(),R,0,7);kcx.clip();kcx.drawImage(offB,0,0,offB.width,offB.height,0,0,W,H);kcx.restore()}
+      kcx.filter="none"}
+    cx.setTransform(1,0,0,1,0,0);cx.globalCompositeOperation="source-over";cx.clearRect(0,0,cv.width,cv.height);
+    cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(kal,0,0);
+    cx.globalCompositeOperation="difference";cx.drawImage(nameW,0,0,nameW.width,nameW.height,0,0,cv.width,cv.height);/* name stays readable — it inverts whatever it sits on */
+    cx.globalCompositeOperation="source-over";
     raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
@@ -336,27 +351,17 @@ const MODES=[
     raf=requestAnimationFrame(loop)})();
   return ()=>cancelAnimationFrame(raf);
 }},
-/* ---- ABSTRACT: a solid geometric shape recedes to reveal the letter (same colour → seamless morph); X = shape⇄letter, Y = corner roundness ---- */
-{id:"ABSTRACT",tip:"Move — X: shape⇄letter, Y: roundness · Click reshuffles",mount(pal,fo){
-  stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
-  const ff=fo.f.replace(/'/g,""),SIDES=[3,4,4,5,6];let raf,seed=Math.floor(rnd(5));
-  const onClick=()=>{seed=Math.floor(rnd(5))};stage.addEventListener("click",onClick);
-  function roundedPoly(x0,y0,rad,sides,rot,r){const pts=[];for(let k=0;k<sides;k++){const a=rot+k/sides*6.2832;pts.push([x0+Math.cos(a)*rad,y0+Math.sin(a)*rad])}
-    const n=pts.length;cx.beginPath();
-    for(let i=0;i<=n;i++){const p0=pts[i%n],p1=pts[(i+1)%n],mx=(p0[0]+p1[0])/2,my=(p0[1]+p1[1])/2;i===0?cx.moveTo(mx,my):cx.arcTo(p0[0],p0[1],mx,my,Math.min(r,rad*0.98))}
-    cx.closePath();cx.fill()}
-  (function loop(){cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
+/* ---- ABSTRACT: ONE morphing form — the letters gel into rounded blobs and back. X = blobs⇄letters, Y = roundness ---- */
+{id:"ABSTRACT",tip:"Move — X: blobs⇄letters, Y: roundness",mount(pal,fo){
+  stage.innerHTML=`<svg width="0" height="0" style="position:absolute"><filter id="abgoo"><feGaussianBlur id="abblur" stdDeviation="0"/><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -13"/></filter></svg><canvas class="play"></canvas>`;
+  const cv=stage.querySelector(".play"),cx=cv.getContext("2d"),blurEl=stage.querySelector("#abblur");sizeCanvas(cv);
+  const off=nameCanvas(fo,pal.fg);let raf;
+  (function loop(){cx.filter="none";cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);
     const t=pactive?Math.min(1,Math.max(0,px/W)):0.5,round=pactive?Math.min(1,Math.max(0,sy()/H)):0.5;
-    cx.fillStyle=pal.fg;cx.textAlign="center";cx.textBaseline="middle";let gi=0;
-    [["MARC",H*0.42],["KIMMEL",H*0.86]].forEach(([wd,cyp])=>{const L=wd.length,cw=W*0.9/L,x0=W*0.05,size=H*0.34;
-      cx.font=`${fo.w} ${size.toFixed(0)}px ${ff},sans-serif`;
-      for(let i=0;i<L;i++){const xp=x0+cw*(i+0.5);
-        cx.fillText(wd[i],xp,cyp);/* letter underneath, always solid */
-        const ss=1-t;if(ss>0.02){const rad=size*0.66*ss,sides=SIDES[(gi+seed)%SIDES.length];/* shape on top recedes as you move → reveals the letter, no fade */
-          roundedPoly(xp,cyp,rad,sides,(gi+seed)*0.7,round*rad)}
-        gi++}});
+    blurEl.setAttribute("stdDeviation",((1-t)*(6+round*22)*DPR).toFixed(1));/* blur+alpha-threshold = merge letters into rounded blobs */
+    cx.filter="url(#abgoo)";cx.drawImage(off,0,0,off.width,off.height,0,0,cv.width,cv.height);cx.filter="none";
     raf=requestAnimationFrame(loop)})();
-  return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
+  return ()=>cancelAnimationFrame(raf);
 }},
 /* ---- STRING: one continuous single-stroke wordmark; the cursor winds it up ---- */
 {id:"STRING",tip:"Wind up the string — it stays tangled · Click resets",mount(pal,fo){
@@ -377,7 +382,7 @@ const MODES=[
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
 /* ---- SMEAR: multicolour paint you smear & blend — only where the cursor is over the letters ---- */
-{id:"SMEAR",tip:"Drag across the letters to smear & mix · Click resets",mount(pal,fo){
+{id:"SMEAR",tip:"Push the ink around like wet paint · Click resets",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
   const ff=fo.f.replace(/'/g,""),INKS=["#FF3B3B","#2FE8D5","#FFD23F","#B14BF4","#00E1D4","#FF5AF2","#C6FF00","#3D6BFF"],
     bh=pal.bg.replace("#",""),bgc={r:parseInt(bh.slice(0,2),16),g:parseInt(bh.slice(2,4),16),b:parseInt(bh.slice(4,6),16)};
@@ -385,17 +390,17 @@ const MODES=[
     cx.setTransform(DPR,0,0,DPR,0,0);cx.textAlign="center";cx.textBaseline="middle";let gi=0;
     [["MARC",H*0.40],["KIMMEL",H*0.82]].forEach(([wd,cy])=>{const L=wd.length,cw=W*0.9/L,x0=W*0.05;cx.font=`${fo.w} ${(H*0.34).toFixed(0)}px ${ff},sans-serif`;
       for(let i=0;i<L;i++){cx.fillStyle=INKS[gi%INKS.length];cx.fillText(wd[i],x0+cw*(i+0.5),cy);gi++}})}
-  paintName();let raf,lx=px,ly=sy();
-  const onClick=()=>paintName();stage.addEventListener("click",onClick);
-  function onInk(x,y){const d=cx.getImageData(Math.round(x*DPR),Math.round(y*DPR),1,1).data;
-    return d[3]>10&&(Math.abs(d[0]-bgc.r)+Math.abs(d[1]-bgc.g)+Math.abs(d[2]-bgc.b))>45}/* only smear while over painted letters */
+  paintName();let raf,lx=px,ly=sy(),carry=null;
+  const onClick=()=>{carry=null;paintName()};stage.addEventListener("click",onClick);
+  function pixel(x,y){const d=cx.getImageData(Math.max(0,Math.min(cv.width-1,Math.round(x*DPR))),Math.max(0,Math.min(cv.height-1,Math.round(y*DPR))),1,1).data;return[d[0],d[1],d[2]]}
   (function loop(){const mvx=px-lx,mvy=sy()-ly;
-    if(pactive&&(Math.abs(mvx)+Math.abs(mvy))>1&&onInk(px,sy())){cx.setTransform(1,0,0,1,0,0);
-      const steps=Math.max(1,Math.ceil(Math.hypot(mvx,mvy)/7));
-      for(let s=1;s<=steps;s++){const t=s/steps,cxp=(lx+mvx*t)*DPR,cyp=(ly+mvy*t)*DPR,sides=5+Math.floor(rnd(3)),R=50*DPR;
-        cx.save();cx.beginPath();/* irregular polygon smudge — painterly edges */
-        for(let k=0;k<sides;k++){const a=k/sides*6.2832+rnd(.5),rr=R*(0.55+rnd(0.7)),X=cxp+Math.cos(a)*rr,Y=cyp+Math.sin(a)*rr;k?cx.lineTo(X,Y):cx.moveTo(X,Y)}
-        cx.closePath();cx.clip();cx.globalAlpha=0.72;cx.drawImage(cv,mvx*DPR*0.55,mvy*DPR*0.55);cx.globalAlpha=1;cx.restore()}}
+    if(pactive&&(Math.abs(mvx)+Math.abs(mvy))>0.6){cx.setTransform(DPR,0,0,DPR,0,0);/* finger-paint smudge: pick up colour, carry it, blend & lay it down anywhere */
+      const steps=Math.max(1,Math.ceil(Math.hypot(mvx,mvy)/6));
+      for(let s=1;s<=steps;s++){const tt=s/steps,cxp=lx+mvx*tt,cyp=ly+mvy*tt,u=pixel(cxp,cyp);
+        if(!carry)carry=u.slice();else{carry[0]+=(u[0]-carry[0])*0.35;carry[1]+=(u[1]-carry[1])*0.35;carry[2]+=(u[2]-carry[2])*0.35}
+        const R=42,g=cx.createRadialGradient(cxp,cyp,0,cxp,cyp,R),c=`${carry[0]|0},${carry[1]|0},${carry[2]|0}`;
+        g.addColorStop(0,`rgba(${c},0.5)`);g.addColorStop(1,`rgba(${c},0)`);cx.fillStyle=g;cx.beginPath();cx.arc(cxp,cyp,R,0,7);cx.fill()}
+    }else carry=null;
     lx=px;ly=sy();raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
@@ -416,78 +421,102 @@ const MODES=[
     lx=px;ly=sy();raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
-/* ---- MORSE: the name spelled in dots & dashes; cursor ripples them, click decodes ---- */
-{id:"MORSE",tip:"Move to ripple · Click to decode",mount(pal,fo){
+/* ---- MORSE: the name spelled in dots & dashes; hover a letter to decode it ---- */
+{id:"MORSE",tip:"Hover a letter to decode it",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);const ff=fo.f.replace(/'/g,"");
-  const CODE={M:"--",A:".-",R:".-.",C:"-.-.",K:"-.-",I:"..",E:".",L:".-.."},syms=[];
+  const CODE={M:"--",A:".-",R:".-.",C:"-.-.",K:"-.-",I:"..",E:".",L:".-.."},groups=[];
   [["MARC",H*0.40],["KIMMEL",H*0.80]].forEach(([wd,cy])=>{const L=wd.length,cw=W*0.9/L,x0=W*0.05,unit=Math.min(cw*0.1,H*0.028),gap=unit*1.9;
     for(let i=0;i<L;i++){const code=CODE[wd[i]],cellx=x0+cw*i+cw/2;let ws=0;for(const c of code)ws+=(c==="."?unit*2:unit*5)+gap;ws-=gap;let sx=cellx-ws/2;
-      for(const c of code){const dash=c==="-",w=dash?unit*5:unit*2;syms.push({x:sx+w/2,y:cy,r:unit,dash,w});sx+=w+gap}}});
-  let raf,dec=0,decE=0;const onClick=()=>{dec=dec?0:1};stage.addEventListener("click",onClick);
-  (function loop(){decE+=(dec-decE)*0.12;
+      const syms=[];for(const c of code){const dash=c==="-",w=dash?unit*5:unit*2;syms.push({x:sx+w/2,y:cy,r:unit,dash,w});sx+=w+gap}
+      groups.push({ch:wd[i],cx:cellx,cy,x0:cellx-cw/2,x1:cellx+cw/2,y0:cy-H*0.18,y1:cy+H*0.18,syms,dec:0,decE:0})}});
+  let raf;(function loop(){
     cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
-    cx.globalAlpha=1-decE;cx.fillStyle=pal.fg;
-    for(const s of syms){const boost=Math.max(0,1-Math.hypot(s.x-px,s.y-sy())/150),r=s.r*(1+boost*0.9);
-      if(s.dash){const w=s.w*(1+boost*0.3);cx.beginPath();cx.roundRect(s.x-w/2,s.y-r,w,r*2,r);cx.fill()}
-      else{cx.beginPath();cx.arc(s.x,s.y,r,0,7);cx.fill()}}
-    if(decE>0.01){cx.globalAlpha=decE;cx.fillStyle=pal.fg;cx.textAlign="center";cx.textBaseline="middle";
-      [["MARC",H*0.40],["KIMMEL",H*0.80]].forEach(([wd,cy])=>{const L=wd.length,cw=W*0.9/L,x0=W*0.05;cx.font=`${fo.w} ${(H*0.3).toFixed(0)}px ${ff},sans-serif`;
-        for(let i=0;i<L;i++)cx.fillText(wd[i],x0+cw*(i+0.5),cy)})}
+    for(const g of groups){g.dec=(px>=g.x0&&px<=g.x1&&sy()>=g.y0&&sy()<=g.y1)?1:0;g.decE+=(g.dec-g.decE)*0.14;/* decode the letter the cursor is over */
+      cx.globalAlpha=1-g.decE;cx.fillStyle=pal.fg;
+      for(const s of g.syms){const boost=Math.max(0,1-Math.hypot(s.x-px,s.y-sy())/150),r=s.r*(1+boost*0.9);
+        if(s.dash){const w=s.w*(1+boost*0.3);cx.beginPath();cx.roundRect(s.x-w/2,s.y-r,w,r*2,r);cx.fill()}
+        else{cx.beginPath();cx.arc(s.x,s.y,r,0,7);cx.fill()}}
+      if(g.decE>0.01){cx.globalAlpha=g.decE;cx.fillStyle=pal.fg;cx.textAlign="center";cx.textBaseline="middle";cx.font=`${fo.w} ${(H*0.3).toFixed(0)}px ${ff},sans-serif`;cx.fillText(g.ch,g.cx,g.cy)}}
     cx.globalAlpha=1;raf=requestAnimationFrame(loop)})();
-  return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
+  return ()=>cancelAnimationFrame(raf);
 }},
 /* ---- SHATTER: the name is glass — cracks follow the cursor, a click shatters & reassembles ---- */
-{id:"SHATTER",tip:"Move to crack · Click to shatter",mount(pal,fo){
+{id:"SHATTER",tip:"Draw cracks on the letters · Click to shatter",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
-  const off=nameCanvas(fo,pal.fg),cols=8,rows=6,gw=W/cols,gh=H/rows,shards=[];
+  const off=nameCanvas(fo,pal.fg),offctx=off.getContext("2d"),cols=8,rows=6,gw=W/cols,gh=H/rows,shards=[],cracks=[];
   const grid=[];for(let j=0;j<=rows;j++){grid[j]=[];for(let i=0;i<=cols;i++)grid[j][i]=[i*gw+(i>0&&i<cols?rnd(gw*.3,-gw*.3):0),j*gh+(j>0&&j<rows?rnd(gh*.3,-gh*.3):0)]}
   for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const P=[grid[j][i],grid[j][i+1],grid[j+1][i+1],grid[j+1][i]],cxp=(P[0][0]+P[1][0]+P[2][0]+P[3][0])/4,cyp=(P[0][1]+P[1][1]+P[2][1]+P[3][1])/4;
-    shards.push({P,cx:cxp,cy:cyp,x:0,y:0,rot:0,vx:0,vy:0,vr:0,home:true})}
-  const cracks=[];let raf,lx=px,ly=sy(),shattered=false;
-  const onClick=()=>{if(shattered)return;shattered=true;for(const s of shards){s.home=false;s.vx=rnd(7,-7);s.vy=rnd(2,-5);s.vr=rnd(.22,-.22)}
-    setTimeout(()=>{for(const s of shards)s.home=true;cracks.length=0;shattered=false},1500)};
+    shards.push({P,cx:cxp,cy:cyp,x:0,y:0,rot:0,vx:0,vy:0,vr:0,home:true,cracked:false})}
+  function onInk(x,y){const d=offctx.getImageData(Math.max(0,Math.min(off.width-1,Math.round(x*DPR))),Math.max(0,Math.min(off.height-1,Math.round(y*DPR))),1,1).data;return d[3]>20}
+  let raf,lx=px,ly=sy();
+  const onClick=()=>{for(const s of shards)if(s.cracked&&s.home){s.home=false;s.vx=rnd(7,-7);s.vy=rnd(2,-5);s.vr=rnd(.22,-.22);s.cracked=false}};/* shatter the cracked letters — they stay broken */
   stage.addEventListener("click",onClick);
   (function loop(){
-    if(pactive&&pspeed>0.6&&!shattered){cracks.push([lx,ly,px,sy()]);if(cracks.length>500)cracks.shift()}lx=px;ly=sy();
-    cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
-    for(const s of shards){if(s.home){s.x*=.8;s.y*=.8;s.rot*=.8}else{s.vy+=0.4;s.x+=s.vx;s.y+=s.vy;s.rot+=s.vr}
+    if(pactive&&pspeed>0.6&&onInk(px,sy())){cracks.push([lx,ly,px,sy(),px+rnd(20,-20),sy()+rnd(20,-20),px+rnd(20,-20),sy()+rnd(20,-20)]);if(cracks.length>600)cracks.shift();
+      const s=shards[Math.max(0,Math.min(rows-1,Math.floor(sy()/gh)))*cols+Math.max(0,Math.min(cols-1,Math.floor(px/gw)))];if(s.home)s.cracked=true}
+    lx=px;ly=sy();
+    cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);/* gaps stay transparent — the stage bg shows through */
+    for(const s of shards){if(!s.home){s.vy+=0.4;s.x+=s.vx;s.y+=s.vy;s.rot+=s.vr;
+        if(s.cy+s.y>H-6){s.y=H-6-s.cy;s.vy*=-0.25;s.vx*=0.7;s.vr*=0.85}}/* fallen shards settle at the bottom and stay */
       cx.save();cx.translate(s.cx+s.x,s.cy+s.y);cx.rotate(s.rot);cx.translate(-s.cx,-s.cy);
       cx.beginPath();cx.moveTo(s.P[0][0],s.P[0][1]);for(let k=1;k<4;k++)cx.lineTo(s.P[k][0],s.P[k][1]);cx.closePath();cx.clip();
       cx.drawImage(off,0,0,off.width,off.height,0,0,W,H);cx.restore()}
-    cx.strokeStyle=pal.bg;cx.lineWidth=2.5;cx.beginPath();for(const c of cracks){cx.moveTo(c[0],c[1]);cx.lineTo(c[2],c[3])}cx.stroke();
+    if(cracks.length){cx.globalCompositeOperation="source-atop";cx.strokeStyle=pal.bg;cx.lineWidth=2.6;cx.lineCap="round";cx.beginPath();/* source-atop → cracks only land on the letters that are still whole */
+      for(const c of cracks){cx.moveTo(c[0],c[1]);cx.lineTo(c[2],c[3]);cx.moveTo(c[2],c[3]);cx.lineTo(c[4],c[5]);cx.moveTo(c[2],c[3]);cx.lineTo(c[6],c[7])}
+      cx.stroke();cx.globalCompositeOperation="source-over"}
     raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
-/* ---- BALLOONS: letters inflate as you hover; a click pops the nearest, then it re-inflates ---- */
-{id:"BALLOONS",tip:"Hover to inflate — keep going and it pops!",mount(pal,fo){
-  const L=domLetters();L.forEach(el=>{el.classList.remove("ol");el.classList.add("balloon")});
-  const S=L.map(el=>{const r=el.getBoundingClientRect();return{el,cx:r.left+r.width/2,cy:r.top+r.height/2,s:1,disp:1,pop:0,peak:1}});
-  const onClick=()=>{let best=null,bd=1e9;for(const o of S){const d=Math.hypot(o.cx-px,o.cy-py);if(d<bd){bd=d;best=o}}if(best&&best.pop<=0){best.pop=1;best.peak=best.disp}};
+/* ---- BALLOONS: puffy balloon tubes that widen as you inflate them, float gently, then pop into confetti (click brings them back) ---- */
+{id:"BALLOONS",tip:"Inflate till it pops · Click to bring them back",mount(pal,fo){
+  stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
+  const words=[["MARC",H*0.40],["KIMMEL",H*0.80]],lh=H*0.27,B=[],debris=[],
+    CONF=["#FF3B3B","#2FE8D5","#FFD23F","#B14BF4","#FF5AF2","#C6FF00","#3D6BFF","#FF6A00","#FFFFFF"],
+    BCOL=["#FF4D4D","#FF8A00","#FFD23F","#3AD35A","#2FE8D5","#3D8BFF","#B14BF4","#FF5AF2","#FF3B6B"];
+  words.forEach(([wd,cy])=>{const L=wd.length,cw=W*0.86/L,x0=W*0.07,lw=cw*0.5;
+    for(let i=0;i<L;i++){const g=GLY[wd[i]],cellx=x0+cw*i+(cw-lw)/2;
+      B.push({pts:g.map(p=>[cellx+p[0]*lw,cy+(p[1]-0.5)*lh]),cx:cellx+lw/2,cy,th:16,popped:false,ph:rnd(6.28),ph2:rnd(6.28),spd:rnd(.5,.25),col:pick(BCOL)})}});
+  const onClick=()=>{for(const o of B)if(o.popped){o.popped=false;o.th=16}};/* re-inflate the popped balloons */
   stage.addEventListener("click",onClick);
-  let raf,t=0;(function loop(){t+=0.1;
-    for(const o of S){
-      if(o.pop>0){o.pop-=0.045;const p=o.pop;o.disp=p>0.7?o.peak*1.12:p>0.55?0.05:0.05+(0.55-p)/0.55*0.95;if(o.pop<=0){o.pop=0;o.s=1;o.disp=1}}
-      else{
-        if(pactive){const d=Math.hypot(o.cx-px,o.cy-py);if(d<170)o.s+=0.02*(1-d/170)}/* inflate more the longer you hover — it stays */
-        o.disp+=(o.s-o.disp)*0.22;
-        if(o.s>=2.7){o.pop=1;o.peak=o.disp}/* over-inflated → pop */
-      }
-      const wob=Math.sin(t*2.4+o.cx)*Math.min(4,(o.disp-1)*3);
-      o.el.style.transform=`scale(${o.disp.toFixed(3)}) rotate(${wob.toFixed(1)}deg)`}
-    raf=requestAnimationFrame(loop)})();
+  function path(o,ox,oy){cx.beginPath();cx.moveTo(o.pts[0][0]+ox,o.pts[0][1]+oy);for(let k=1;k<o.pts.length;k++)cx.lineTo(o.pts[k][0]+ox,o.pts[k][1]+oy)}
+  let raf,t=0;(function loop(){t+=0.016;
+    cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);cx.lineCap="round";cx.lineJoin="round";
+    for(const o of B){
+      const fx=Math.sin(t*o.spd+o.ph)*15,fy=Math.cos(t*o.spd*0.8+o.ph2)*13,ccx=o.cx+fx,ccy=o.cy+fy;/* gentle float — no jiggle */
+      if(o.popped){o.th+=(0-o.th)*0.5;if(o.th<0.6)o.th=0}
+      else{if(pactive){const d=Math.hypot(ccx-px,ccy-sy());if(d<180)o.th+=0.4*(1-d/180)}/* inflating widens the tube */
+        if(o.th>=66){o.popped=true;for(let n=0;n<30;n++){const a=rnd(6.2832),sp=rnd(11,2);debris.push({x:ccx,y:ccy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-3,rot:rnd(6.28),vr:rnd(.5,-.5),c:pick(CONF),s:rnd(18,7),life:1})}}}/* burst! */
+      if(o.th>=2){const th=o.th,col=o.col;/* layered strokes fake a rounded 3D tube */
+        cx.strokeStyle="rgba(0,0,0,0.22)";cx.lineWidth=th;path(o,fx+th*0.14,fy+th*0.2);cx.stroke();/* drop shadow */
+        cx.strokeStyle=shade(col,-58);cx.lineWidth=th;path(o,fx,fy);cx.stroke();/* dark rim */
+        cx.strokeStyle=col;cx.lineWidth=th*0.78;path(o,fx,fy);cx.stroke();/* body */
+        cx.strokeStyle=shade(col,55);cx.lineWidth=th*0.42;path(o,fx-th*0.07,fy-th*0.1);cx.stroke();/* lit side */
+        cx.strokeStyle="rgba(255,255,255,0.82)";cx.lineWidth=Math.max(1,th*0.13);path(o,fx-th*0.22,fy-th*0.26);cx.stroke()}}/* gloss streak */
+    for(let i=debris.length-1;i>=0;i--){const d=debris[i];d.vy+=0.28;d.vx*=0.99;d.x+=d.vx;d.y+=d.vy;d.rot+=d.vr;d.life-=0.012;
+      if(d.life<=0){debris.splice(i,1);continue}
+      cx.save();cx.globalAlpha=Math.max(0,d.life);cx.translate(d.x,d.y);cx.rotate(d.rot);cx.fillStyle=d.c;cx.fillRect(-d.s/2,-d.s/2,d.s,d.s*0.62);cx.restore()}
+    cx.globalAlpha=1;raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
 /* ---- DISSOLVE: sweep and the letters crumble into falling sand; a click reforms them ---- */
 {id:"DISSOLVE",tip:"Sweep to crumble · Click to reform",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
   const off=nameCanvas(fo,pal.fg),img=off.getContext("2d").getImageData(0,0,off.width,off.height).data,P=[],step=10;
-  for(let y=0;y<H;y+=step)for(let x=0;x<W;x+=step){const idx=(Math.round(y*DPR)*off.width+Math.round(x*DPR))*4;if(img[idx+3]>40)P.push({hx:x,hy:y,x,y,vx:0,vy:0,rel:false})}
-  const onClick=()=>{for(const p of P)p.rel=false};stage.addEventListener("click",onClick);
+  const binW=6,bins=Math.max(1,Math.ceil(W/binW)),floor=new Float32Array(bins);/* the sand pile grows here */
+  for(let y=0;y<H;y+=step)for(let x=0;x<W;x+=step){const idx=(Math.round(y*DPR)*off.width+Math.round(x*DPR))*4;if(img[idx+3]>40)P.push({hx:x,hy:y,x,y,vx:0,vy:0,rel:false,settled:false})}
+  const onClick=()=>{for(const p of P){p.rel=false;p.settled=false}floor.fill(0)};stage.addEventListener("click",onClick);
   let raf;(function loop(){
     cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);cx.fillStyle=pal.fg;
     for(const p of P){
+      if(p.settled){cx.fillRect(p.x-2,p.y-2,4,4);continue}
       if(!p.rel){if(pactive&&Math.hypot(p.x-px,p.y-sy())<75){p.rel=true;p.vx=rnd(3.2,-3.2);p.vy=rnd(1,-2.4)}p.x+=(p.hx-p.x)*0.25;p.y+=(p.hy-p.y)*0.25}
-      else{p.vy+=0.35;p.vx*=0.99;p.x+=p.vx;p.y+=p.vy;if(p.y>H){p.y=H;p.vy*=-0.2;p.vx*=0.6}}
+      else{p.vy+=0.35;p.vx*=0.99;p.x+=p.vx;p.y+=p.vy;
+        if(p.x<2){p.x=2;p.vx*=-0.4}else if(p.x>W-2){p.x=W-2;p.vx*=-0.4}
+        let bin=Math.max(0,Math.min(bins-1,Math.round(p.x/binW)));
+        const bl=bin>0?floor[bin-1]:1e9,br=bin<bins-1?floor[bin+1]:1e9,here=floor[bin];/* roll into lower valleys (angle of repose) */
+        if(bl<here-4&&bl<=br)bin--;else if(br<here-4)bin++;
+        const restY=H-floor[bin]-2;
+        if(p.y>=restY&&p.vy>0){p.x=bin*binW+binW/2;p.y=restY;p.settled=true;floor[bin]+=3.2}/* land and build the pile */}
       cx.fillRect(p.x-2,p.y-2,4,4)}
     raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
@@ -511,6 +540,41 @@ const MODES=[
     cx.setTransform(1,0,0,1,0,0);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(col,0,0);
     raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
+}},
+/* ---- SOUNDWAVE: the name rendered as a bouncing audio equaliser ---- */
+{id:"SOUNDWAVE",tip:"Run your cursor over the levels · Click to drop the pitch",mount(pal,fo){
+  stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
+  const off=nameCanvas(fo,pal.fg),rows=[H*0.265,H*0.775],band=H*0.44,cw=8,PITCH=[2.4,1.6,1.0,0.6];
+  let raf,t=0,pi=0;const onClick=()=>{pi=(pi+1)%PITCH.length};stage.addEventListener("click",onClick);/* cycle pitch high → low */
+  (function loop(){const p=PITCH[pi];t+=0.05;
+    cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
+    for(const yc of rows)for(let x=W*0.03;x<W*0.97;x+=cw){
+      let amp=0.35+0.55*Math.abs(Math.sin((t*3+x*0.03)*p))*(0.4+0.6*Math.abs(Math.sin((x*0.11+t)*p)));
+      if(pactive)amp+=Math.max(0,1-Math.abs(x+cw/2-px)/150)*0.9;/* run your hand over the EQ to pump the levels */
+      const sc=Math.min(1.7,amp);
+      cx.drawImage(off,x*DPR,(yc-band/2)*DPR,cw*DPR,band*DPR,x,yc-band*sc/2,cw,band*sc)}
+    raf=requestAnimationFrame(loop)})();
+  return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
+}},
+/* ---- RESHAPE: every letter has draggable anchor points you can pull to redraw its form ---- */
+{id:"RESHAPE",tip:"Drag the anchor points to reshape the letters",mount(pal,fo){
+  stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
+  const words=[["MARC",H*0.40],["KIMMEL",H*0.80]],lh=H*0.30,letters=[],nodes=[];
+  words.forEach(([wd,cy])=>{const L=wd.length,cw=W*0.86/L,x0=W*0.07,lw=cw*0.55;
+    for(let i=0;i<L;i++){const g=GLY[wd[i]],cellx=x0+cw*i+(cw-lw)/2,pts=g.map(p=>({x:cellx+p[0]*lw,y:cy+(p[1]-0.5)*lh}));letters.push({pts});pts.forEach(p=>nodes.push(p))}});
+  let grabbed=null,raf;
+  const onDown=()=>{let best=null,bd=24;for(const n of nodes){const d=Math.hypot(n.x-px,n.y-sy());if(d<bd){bd=d;best=n}}grabbed=best};
+  stage.addEventListener("pointerdown",onDown);
+  (function loop(){
+    if(pdown&&grabbed){grabbed.x=px;grabbed.y=sy()}else if(!pdown)grabbed=null;
+    cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
+    cx.strokeStyle=pal.fg;cx.lineWidth=Math.max(5,H*0.013);cx.lineJoin="round";cx.lineCap="round";
+    for(const L of letters){const p=L.pts;if(p.length<2)continue;cx.beginPath();cx.moveTo(p[0].x,p[0].y);
+      for(let k=1;k<p.length-1;k++)cx.quadraticCurveTo(p[k].x,p[k].y,(p[k].x+p[k+1].x)/2,(p[k].y+p[k+1].y)/2);
+      cx.lineTo(p[p.length-1].x,p[p.length-1].y);cx.stroke()}
+    for(const n of nodes){cx.beginPath();cx.arc(n.x,n.y,n===grabbed?9:5,0,7);cx.fillStyle=n===grabbed?"#fff":pal.bg;cx.fill();cx.lineWidth=2;cx.strokeStyle=pal.fg;cx.stroke()}
+    raf=requestAnimationFrame(loop)})();
+  return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("pointerdown",onDown)};
 }}
 ];
 
