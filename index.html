@@ -391,23 +391,27 @@ const MODES=[
 /* ---- SMEAR: multicolour paint you smear & blend — only where the cursor is over the letters ---- */
 {id:"SMEAR",tip:"Move over the letters to smear · Click to wipe it clean",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
-  const ff=fo.f.replace(/'/g,""),INKS=["#FF3B3B","#2FE8D5","#FFD23F","#B14BF4","#00E1D4","#FF5AF2","#C6FF00","#3D6BFF"],
-    bh=pal.bg.replace("#",""),bgc={r:parseInt(bh.slice(0,2),16),g:parseInt(bh.slice(2,4),16),b:parseInt(bh.slice(4,6),16)};
-  function paintName(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);
-    cx.setTransform(DPR,0,0,DPR,0,0);cx.textAlign="center";cx.textBaseline="middle";let gi=0;
-    [["MARC",H*0.40],["KIMMEL",H*0.82]].forEach(([wd,cy])=>{const L=wd.length,cw=W*0.9/L,x0=W*0.05;cx.font=`${fo.w} ${(H*0.34).toFixed(0)}px ${ff},sans-serif`;
-      for(let i=0;i<L;i++){cx.fillStyle=INKS[gi%INKS.length];cx.fillText(wd[i],x0+cw*(i+0.5),cy);gi++}})}
-  paintName();let raf,lx=px,ly=sy(),carry=null;
+  const ff=fo.f.replace(/'/g,""),bh=pal.bg.replace("#",""),bgc={r:parseInt(bh.slice(0,2),16),g:parseInt(bh.slice(2,4),16),b:parseInt(bh.slice(4,6),16)};
+  const PAL=["#FF3B3B","#2FE8D5","#FFD23F","#B14BF4","#00E1D4","#FF5AF2","#C6FF00","#3D6BFF","#FF6A00","#00FF9C"];
+  const bgDist=h=>{h=h.replace("#","");return Math.abs(parseInt(h.slice(0,2),16)-bgc.r)+Math.abs(parseInt(h.slice(2,4),16)-bgc.g)+Math.abs(parseInt(h.slice(4,6),16)-bgc.b)};
+  let INKS=PAL.filter(c=>bgDist(c)>150);if(INKS.length<4)INKS=PAL.filter(c=>bgDist(c)>80);if(INKS.length<4)INKS=PAL;/* drop inks too close to the bg so no letter vanishes */
+  function drawLetters(ctx){ctx.textAlign="center";ctx.textBaseline="middle";let gi=0;
+    [["MARC",H*0.40],["KIMMEL",H*0.82]].forEach(([wd,cy])=>{const L=wd.length,cw=W*0.9/L,x0=W*0.05;ctx.font=`${fo.w} ${(H*0.34).toFixed(0)}px ${ff},sans-serif`;
+      for(let i=0;i<L;i++){ctx.fillStyle=INKS[gi%INKS.length];ctx.fillText(wd[i],x0+cw*(i+0.5),cy);gi++}})}
+  function paintName(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);drawLetters(cx)}
+  paintName();
+  /* pristine copy of the letters — the pickup colour always comes from the ORIGINAL letter at that spot, even after it's been painted over */
+  const orig=document.createElement("canvas");orig.width=W*DPR;orig.height=H*DPR;const ocx=orig.getContext("2d");ocx.setTransform(DPR,0,0,DPR,0,0);drawLetters(ocx);
+  let raf,lx=px,ly=sy(),carry=null;
   const onClick=()=>{carry=null;paintName()};stage.addEventListener("click",onClick);/* click repaints the fresh name */
-  const isBg=(r,g,b)=>Math.abs(r-bgc.r)+Math.abs(g-bgc.g)+Math.abs(b-bgc.b)<50;
-  function pixel(x,y){return cx.getImageData(Math.max(0,Math.min(cv.width-1,Math.round(x*DPR))),Math.max(0,Math.min(cv.height-1,Math.round(y*DPR))),1,1).data}
+  function origAt(x,y){return ocx.getImageData(Math.max(0,Math.min(orig.width-1,Math.round(x*DPR))),Math.max(0,Math.min(orig.height-1,Math.round(y*DPR))),1,1).data}
   (function loop(){const mvx=px-lx,mvy=sy()-ly;
-    if(pactive&&(Math.abs(mvx)+Math.abs(mvy))>0.6){cx.setTransform(DPR,0,0,DPR,0,0);/* hover to smear; pick up ONLY letter colours, but lay them down anywhere — the bg can get painted */
+    if(pactive&&(Math.abs(mvx)+Math.abs(mvy))>0.6){cx.setTransform(DPR,0,0,DPR,0,0);/* hover to smear; pick up the ORIGINAL letter colour, lay it down anywhere */
       const steps=Math.max(1,Math.ceil(Math.hypot(mvx,mvy)/6));
-      for(let s=1;s<=steps;s++){const tt=s/steps,cxp=lx+mvx*tt,cyp=ly+mvy*tt,u=pixel(cxp,cyp);
-        if(!isBg(u[0],u[1],u[2])){if(!carry)carry=[u[0],u[1],u[2]];else{carry[0]+=(u[0]-carry[0])*0.3;carry[1]+=(u[1]-carry[1])*0.3;carry[2]+=(u[2]-carry[2])*0.3}}
-        if(carry){const R=42,g=cx.createRadialGradient(cxp,cyp,0,cxp,cyp,R),c=`${carry[0]|0},${carry[1]|0},${carry[2]|0}`;
-          g.addColorStop(0,`rgba(${c},0.5)`);g.addColorStop(1,`rgba(${c},0)`);cx.fillStyle=g;cx.beginPath();cx.arc(cxp,cyp,R,0,7);cx.fill()}}
+      for(let s=1;s<=steps;s++){const tt=s/steps,cxp=lx+mvx*tt,cyp=ly+mvy*tt,u=origAt(cxp,cyp);
+        if(u[3]>20)carry=[u[0],u[1],u[2]];/* update to the letter's original colour whenever the cursor crosses where it was */
+        if(carry){const R=34,g=cx.createRadialGradient(cxp,cyp,0,cxp,cyp,R),c=`${carry[0]|0},${carry[1]|0},${carry[2]|0}`;
+          g.addColorStop(0,`rgb(${c})`);g.addColorStop(0.78,`rgb(${c})`);g.addColorStop(1,`rgba(${c},0)`);cx.fillStyle=g;cx.beginPath();cx.arc(cxp,cyp,R,0,7);cx.fill()}}/* solid core, only a thin soft rim */
     }else carry=null;
     lx=px;ly=sy();raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
