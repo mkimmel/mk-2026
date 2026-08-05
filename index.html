@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Marc Kimmel Dot Com</title>
 <meta name="description" content="Marc Kimmel — design leader & builder. A live, interactive wordmark.">
 <link id="fav" rel="icon" href="data:,">
@@ -12,9 +12,10 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0A0A0A;--fg:#FFFFFF;--ff:'Archivo';--fw:800}
-html,body{height:100%;overflow:hidden}
+html,body{height:100%;overflow:hidden;touch-action:none;overscroll-behavior:none}
 body{background:var(--bg);color:var(--fg);cursor:none;
   font-family:'IBM Plex Mono',monospace;-webkit-font-smoothing:antialiased;
+  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
   transition:background .5s ease,color .5s ease}
 
 /* ---- structural chrome (persists across versions) ---- */
@@ -33,8 +34,11 @@ body{background:var(--bg);color:var(--fg);cursor:none;
 #bar a:hover{text-decoration:underline}
 #bar>a,#bar>.right{flex:none}
 #bar>.right{display:inline-flex;gap:1.4em;align-items:center}
-#next{cursor:none;user-select:none}
-#next:hover{opacity:.6}
+#next{cursor:none;user-select:none;-webkit-user-select:none;
+  display:inline-flex;align-items:center;padding:5px 13px;border:1.6px solid var(--fg);border-radius:999px;
+  font-weight:700;line-height:1;transition:opacity .2s,background .3s,color .3s,transform .1s}
+#next:hover{background:var(--fg);color:var(--bg)}
+#next:active{transform:scale(.94)}
 #readout{flex:1;min-width:0;opacity:.7;text-align:center;overflow:hidden;text-overflow:ellipsis}
 
 #grid{position:fixed;inset:34px 0;z-index:6;pointer-events:none;mix-blend-mode:difference;opacity:.12;
@@ -42,7 +46,7 @@ body{background:var(--bg);color:var(--fg);cursor:none;
 
 /* ---- stage where each mode mounts ---- */
 #stage{position:fixed;inset:34px 0;z-index:10;overflow:hidden;isolation:isolate;background:var(--bg);
-  transition:background .5s}
+  touch-action:none;transition:background .5s}
 #stage.inverted{filter:invert(1)}
 
 .lines{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:0}
@@ -72,6 +76,23 @@ canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 #cursor.SCRATCH{width:228px;height:228px;margin:-114px 0 0 -114px}
 
 @media (prefers-reduced-motion:reduce){.mq-track{animation:none}}
+
+/* ---- small screens: declutter the bar, grow the tap target ---- */
+@media (max-width:640px){
+  #readout,.geo{display:none}
+  #marquee{height:calc(34px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
+  #bar{height:calc(56px + env(safe-area-inset-bottom));padding:0 16px env(safe-area-inset-bottom);
+    font-size:11px;gap:12px}
+  .bl{font-size:11px}
+  #next{padding:12px 22px;font-size:13px;letter-spacing:.14em;border-width:2px}
+}
+/* ---- touch devices: no fake cursor, taps drive the button ---- */
+@media (pointer:coarse) and (hover:none){
+  #cursor{display:none}
+  body{cursor:auto}
+  #next:hover{background:none;color:var(--fg)}
+  #next:active{background:var(--fg);color:var(--bg);transform:scale(.94)}
+}
 </style>
 </head>
 <body>
@@ -80,9 +101,9 @@ canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 <div id="stage"></div>
 <div id="cursor"><div class="ring"></div></div>
 <footer id="bar">
-  <span>mkimmel@gmail.com</span>
+  <span class="bl">mkimmel@gmail.com</span>
   <span id="readout">—</span>
-  <span class="right"><span id="next">Space · Next ↘</span><span>Vancouver · <span id="date">—</span></span></span>
+  <span class="right"><span id="next" role="button" tabindex="0" aria-label="Next mode">NEXT ↘</span><span class="geo">Vancouver · <span id="date">—</span></span></span>
 </footer>
 
 <script>
@@ -138,7 +159,8 @@ makeFavicon();setInterval(makeFavicon,2200);
 let px=innerWidth/2,py=innerHeight/2,ppx=px,ppy=py,pspeed=0,pactive=false,pdown=false;
 addEventListener("pointermove",e=>{px=e.clientX;py=e.clientY;pactive=true});
 addEventListener("pointerdown",e=>{px=e.clientX;py=e.clientY;pactive=true;pdown=true});
-addEventListener("pointerup",()=>{pdown=false});
+addEventListener("pointerup",e=>{pdown=false;if(e.pointerType==="touch")pactive=false});
+addEventListener("pointercancel",()=>{pdown=false;pactive=false});
 document.addEventListener("mouseleave",()=>pactive=false);
 let mvF=0;
 function ptrLoop(){pspeed=pspeed*0.75+Math.hypot(px-ppx,py-ppy)*0.25;ppx=px;ppy=py;
@@ -578,6 +600,24 @@ const MODES=[
     for(const n of nodes){cx.beginPath();cx.arc(n.x,n.y,n===grabbed?9:5,0,7);cx.fillStyle=n===grabbed?"#fff":pal.bg;cx.fill();cx.lineWidth=2;cx.strokeStyle=pal.fg;cx.stroke()}
     raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("pointerdown",onDown);stage.removeEventListener("click",onClick)};
+}},
+/* ---- TRAIL: dragging writes the name letter-by-letter along the cursor path; click reshuffles the font & size ---- */
+{id:"TRAIL",tip:"Drag to write my name · Click for a new font & size",mount(pal,fo){
+  stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
+  cx.setTransform(1,0,0,1,0,0);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);/* keep the trail — never cleared */
+  const NAME="MARC KIMMEL ",FAMS=["Anton","Archivo","Fraunces","Space Mono","IBM Plex Mono","Georgia","Impact","Courier New","Times New Roman"];
+  let fam,size,weight,acc=0,seq=0,lx=px,ly=sy(),raf;
+  function restyle(){fam=pick(FAMS);size=rnd(130,32);weight=pick([400,600,700,800,900])}
+  restyle();const onClick=()=>restyle();stage.addEventListener("click",onClick);/* new random style each click */
+  (function loop(){cx.setTransform(DPR,0,0,DPR,0,0);cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle=pal.fg;
+    if(pactive){let dx=px-lx,dy=sy()-ly,d=Math.hypot(dx,dy);
+      if(d>0.01){const ux=dx/d,uy=dy/d,spacing=Math.max(10,size*0.62);let x=lx,y=ly,rem=d;
+        while(acc+rem>=spacing){const need=spacing-acc;x+=ux*need;y+=uy*need;rem-=need;acc=0;
+          const ch=NAME[seq++%NAME.length];
+          if(ch!==" "){cx.font=`${weight} ${size.toFixed(0)}px "${fam}",sans-serif`;cx.fillText(ch,x,y)}}
+        acc+=rem}}
+    lx=px;ly=sy();raf=requestAnimationFrame(loop)})();
+  return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }}
 ];
 
