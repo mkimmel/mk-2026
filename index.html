@@ -74,6 +74,7 @@ canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 #cursor.SPILL .ring,#cursor.KALEIDO .ring{border-width:2px}
 #cursor.SPOTLIGHT{width:57px;height:57px;margin:-28.5px 0 0 -28.5px}
 #cursor.SCRATCH{width:228px;height:228px;margin:-114px 0 0 -114px}
+#cursor.SHELF{width:18px;height:18px;margin:-9px 0 0 -9px}
 
 @media (prefers-reduced-motion:reduce){.mq-track{animation:none}}
 
@@ -617,6 +618,75 @@ const MODES=[
           if(ch!==" "){cx.font=`${weight} ${size.toFixed(0)}px "${fam}",sans-serif`;cx.fillText(ch,x,y)}}
         acc+=rem}}
     lx=px;ly=sy();raf=requestAnimationFrame(loop)})();
+  return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
+}},
+{id:"SHELF",tip:"Hover to nudge the spines · Click a book to topple or yank it",mount(pal,fo){
+  stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
+  const lm=x=>{x=x.replace("#","");return(0.299*parseInt(x.slice(0,2),16)+0.587*parseInt(x.slice(2,4),16)+0.114*parseInt(x.slice(4,6),16))/255};
+  const FAMS=["Anton","Archivo","Fraunces","Space Mono","IBM Plex Mono","Georgia","Times New Roman","Palatino Linotype","Courier New","Impact","Trebuchet MS"];
+  const NAMES=["MARC KIMMEL","MARC KIMMEL","Marc Kimmel","M. KIMMEL","KIMMEL","marc kimmel"];
+  const COVERS=["#1F3A5F","#8C2B2B","#D9A441","#2E5D4B","#C4623A","#EAE0CC","#242424","#1C6E7D","#E9622F","#B7457E","#4B3B78","#0E4D45","#A61C3C","#F0C24B","#3A6EA5","#7A1F2B","#127C71","#E4B7C6"];
+  const shelfY=H*0.90,maxH=Math.min(H*0.74,H-40),minH=H*0.34,bgL=lm(pal.bg);
+  const books=[];let x=Math.max(14,W*0.03);
+  while(x<W-14){
+    const w=rnd(90,34),h=rnd(maxH,minH);if(x+w>W-14)break;
+    const col=pick(COVERS),tcol=lm(col)>0.55?"#151210":"#F4ECDB",font=pick(FAMS),weight=pick([400,500,700,900]),title=pick(NAMES);
+    cx.font=`${weight} 100px "${font}"`;const tw=cx.measureText(title).width||100;
+    const fontSize=Math.max(9,Math.min(100*(h*0.80)/tw,w*0.6));
+    books.push({x:x+w/2,w,h,col,tcol,font,weight,title,fontSize,phase:rnd(6.28),spacing:rnd(4,-1),
+      band:Math.random()<0.6,mode:"stand",theta:0,omega:0,dir:1,fx:0,fy:0,vx:0,vy:0,sway:0,done:false});
+    x+=w+2+rnd(7,0);
+  }
+  function topple(b,dir,om){b.mode="fall";b.dir=dir;b.omega=dir*Math.abs(om);b.sway=0}
+  function drawBook(b){
+    if(b.done)return;const w=b.w,h=b.h;
+    cx.save();cx.translate(b.x+b.fx,shelfY+b.fy);cx.rotate(-b.theta-b.sway);/* +theta = leans/topples toward +x (right), matching the domino contact math */
+    const r=Math.min(4,w*0.14),g=cx.createLinearGradient(-w/2,0,w/2,0);
+    g.addColorStop(0,shade(b.col,-52));g.addColorStop(0.14,shade(b.col,-12));g.addColorStop(0.5,shade(b.col,14));g.addColorStop(0.86,shade(b.col,-12));g.addColorStop(1,shade(b.col,-52));
+    cx.beginPath();cx.roundRect(-w/2,-h,w,h,[r,r,1,1]);cx.fillStyle=g;cx.fill();
+    cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,0.35)";cx.stroke();
+    cx.fillStyle="rgba(255,255,255,0.16)";cx.fillRect(-w/2+1.5,-h+1,w-3,2);/* page-block highlight along the top edge */
+    if(b.band){cx.strokeStyle=b.tcol;cx.globalAlpha=0.5;cx.lineWidth=1.4;
+      cx.beginPath();cx.moveTo(-w/2+4,-h*0.84);cx.lineTo(w/2-4,-h*0.84);cx.moveTo(-w/2+4,-h*0.16);cx.lineTo(w/2-4,-h*0.16);cx.stroke();cx.globalAlpha=1}
+    cx.save();cx.translate(0,-h/2);cx.rotate(-Math.PI/2);/* run the name up the spine */
+    cx.fillStyle=b.tcol;cx.textAlign="center";cx.textBaseline="middle";cx.font=`${b.weight} ${b.fontSize.toFixed(1)}px "${b.font}",serif`;
+    if("letterSpacing" in cx)cx.letterSpacing=b.spacing.toFixed(1)+"px";
+    cx.fillText(b.title,0,0);if("letterSpacing" in cx)cx.letterSpacing="0px";
+    cx.restore();cx.restore();
+  }
+  const onClick=()=>{const mx=px,my=sy();let hit=null;
+    for(const b of books){if(b.mode!=="stand"||b.done)continue;if(mx>=b.x-b.w/2&&mx<=b.x+b.w/2&&my<=shelfY&&my>=shelfY-b.h){hit=b;break}}
+    if(!hit){let bd=1e9;for(const b of books){if(b.mode!=="stand"||b.done)continue;const d=Math.abs(mx-b.x);if(d<bd){bd=d;hit=d<b.w?b:hit}}}
+    if(hit){
+      if(Math.random()<0.62){let l=0,r=0;for(const b of books){if(b===hit||b.mode!=="stand"||b.done)continue;b.x<hit.x?l++:r++}topple(hit,r>=l?1:-1,0.085)}
+      else{hit.mode="yank";hit.vy=-rnd(27,17);hit.vx=rnd(3.5,-3.5);hit.omega=rnd(0.22,-0.22)||0.12;hit.done=false}
+    }else{for(const b of books){if(b.mode==="stand"&&!b.done)continue;if(b.done){b.fy=H*0.95;b.fx=rnd(40,-40);b.done=false}b.mode="return"}}
+  };
+  stage.addEventListener("click",onClick);
+  let raf,t=0;
+  (function loop(){t+=0.016;
+    const mx=px,my=sy(),near=pactive&&my>-40&&my<H+40;
+    for(const b of books){
+      if(b.mode==="fall"){b.omega+=b.dir*0.011*Math.max(0.12,Math.cos(b.theta));b.omega*=0.995;b.theta+=b.omega;
+        const lim=b.dir*Math.PI/2;if((b.dir>0&&b.theta>=lim)||(b.dir<0&&b.theta<=lim)){b.theta=lim;b.omega*=-0.16;if(Math.abs(b.omega)<0.012)b.omega=0}b.sway=0}
+      else if(b.mode==="yank"){if(!b.done){b.vy+=0.9;b.fy+=b.vy;b.fx+=b.vx;b.theta+=b.omega;b.omega*=0.996;if(b.fy>H*1.15)b.done=true}b.sway=0}
+      else if(b.mode==="return"){b.fx*=0.82;b.fy*=0.82;b.theta*=0.82;b.omega=0;
+        if(Math.abs(b.fx)+Math.abs(b.fy)+Math.abs(b.theta)<0.6){b.fx=0;b.fy=0;b.theta=0;b.mode="stand"}b.sway=0}
+      else{let tg=0;/* still until the cursor comes near */
+        if(near){const inf=Math.max(0,1-Math.abs(mx-b.x)/(b.w*2.4));if(inf>0)tg=inf*(0.11*Math.sin(t*3.4+b.phase)+0.05*Math.sign(b.x-mx))}
+        b.sway+=(tg-b.sway)*0.12}
+    }
+    /* domino: a falling book's top edge shoves the next standing neighbour */
+    for(let i=0;i<books.length;i++){const b=books[i];if(b.mode!=="fall")continue;const topX=b.x+b.h*Math.sin(b.theta);
+      if(b.dir>0){const nb=books[i+1];if(nb&&nb.mode==="stand"&&topX>=nb.x-nb.w*0.5-2)topple(nb,1,Math.max(0.05,b.omega*0.7))}
+      else{const nb=books[i-1];if(nb&&nb.mode==="stand"&&topX<=nb.x+nb.w*0.5+2)topple(nb,-1,Math.max(0.05,Math.abs(b.omega)*0.7))}}
+    cx.setTransform(1,0,0,1,0,0);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
+    for(const b of books){if(b.done||b.mode==="yank")continue;cx.save();cx.beginPath();/* contact shadow */
+      cx.ellipse(b.x+b.fx,shelfY+3,Math.max(8,b.w*0.6),6,0,0,7);cx.fillStyle=`rgba(0,0,0,${(0.06+0.24*bgL).toFixed(2)})`;cx.fill();cx.restore()}
+    cx.strokeStyle=pal.fg;cx.globalAlpha=0.32;cx.lineWidth=2;cx.beginPath();cx.moveTo(0,shelfY);cx.lineTo(W,shelfY);cx.stroke();cx.globalAlpha=1;
+    for(const b of books)if(b.mode!=="yank")drawBook(b);
+    for(const b of books)if(b.mode==="yank")drawBook(b);/* yanked books fly over the shelf */
+    raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }}
 ];
