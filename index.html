@@ -22,9 +22,9 @@ body{background:var(--bg);color:var(--fg);cursor:none;
 #marquee{position:fixed;top:0;left:0;right:0;height:46px;z-index:40;overflow:hidden;
   display:flex;align-items:center;border-bottom:2px solid var(--fg);background:var(--bg);
   transition:background .5s,border-color .5s}
-.mq-track{display:inline-flex;white-space:nowrap;will-change:transform;animation:mq 34s linear infinite}
+.mq-track{display:inline-flex;align-items:center;white-space:nowrap;will-change:transform;animation:mq 34s linear infinite}
 .mq-track span{font-size:14px;letter-spacing:.16em;text-transform:uppercase;padding:0 1.25em;color:var(--fg)}
-.mq-track .sep{padding:0 .1em;opacity:.5;letter-spacing:0;font-size:.9em}
+.mq-track .sep{padding:0 .35em;letter-spacing:0;font-size:1.6em;line-height:1;display:inline-flex;align-items:center;opacity:.85}
 @keyframes mq{to{transform:translateX(-50%)}}
 
 #bar{position:fixed;bottom:0;left:0;right:0;height:34px;z-index:40;overflow:hidden;
@@ -122,7 +122,7 @@ document.getElementById("date").textContent=
 
 /* marquee content from the JD */
 const MQ=["Marc Kimmel","Design Director, Whisk @ Samsung","Experiences That Enrich & Elevate Daily Life","Building & Leading Global Teams","Prototyping AI-First Experiences","Customer Insights & Behavioural Science","Solve Problems, Tell Stories, Build Momentum","Happiest in a Garden or on a Mountain"];
-const SEP=["✦","☺︎","•","✈︎","❋","◆","✷","❄︎"];/* unique little monotone separators, one per statement */
+const SEP=["✦","⚙︎","☺︎","✈︎","✳︎","❋","❀","❄︎"];/* clean monotone glyph separators (text-presentation), one per statement */
 document.getElementById("mqt").innerHTML=[0,1].map(()=>MQ.map((s,i)=>`<span>${s}</span><span class="sep">${SEP[i%SEP.length]}</span>`).join("")).join("");
 
 /* ---- palettes: mostly high-contrast mono, occasional single accent ---- */
@@ -472,29 +472,38 @@ const MODES=[
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
 /* ---- SHATTER: the name is glass — cracks follow the cursor, a click shatters & reassembles ---- */
-{id:"SHATTER",tip:"Slice the letters like a knife · Click to shatter the pieces",mount(pal,fo){
+{id:"SHATTER",tip:"Slice across the letters to shred them · Click to add random cuts",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
-  const off=nameCanvas(fo,pal.fg),offctx=off.getContext("2d"),cols=8,rows=6,gw=W/cols,gh=H/rows,shards=[],cracks=[];
-  const grid=[];for(let j=0;j<=rows;j++){grid[j]=[];for(let i=0;i<=cols;i++)grid[j][i]=[i*gw+(i>0&&i<cols?rnd(gw*.3,-gw*.3):0),j*gh+(j>0&&j<rows?rnd(gh*.3,-gh*.3):0)]}
-  for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const P=[grid[j][i],grid[j][i+1],grid[j+1][i+1],grid[j+1][i]],cxp=(P[0][0]+P[1][0]+P[2][0]+P[3][0])/4,cyp=(P[0][1]+P[1][1]+P[2][1]+P[3][1])/4;
-    shards.push({P,cx:cxp,cy:cyp,x:0,y:0,rot:0,vx:0,vy:0,vr:0,home:true,cracked:false})}
-  function onInk(x,y){const d=offctx.getImageData(Math.max(0,Math.min(off.width-1,Math.round(x*DPR))),Math.max(0,Math.min(off.height-1,Math.round(y*DPR))),1,1).data;return d[3]>20}
-  let raf,lx=px,ly=sy();
-  const onClick=()=>{for(const s of shards)if(s.cracked&&s.home){s.home=false;s.vx=rnd(7,-7);s.vy=rnd(2,-5);s.vr=rnd(.22,-.22);s.cracked=false}};/* shatter the cracked letters — they stay broken */
+  const off=nameCanvas(fo,pal.fg),oi=off.getContext("2d").getImageData(0,0,off.width,off.height).data,OW=off.width,OH=off.height;
+  const cellS=Math.max(16,H*0.042),cols=Math.min(46,Math.max(10,Math.round(W/cellS))),rows=Math.min(38,Math.max(8,Math.round(H/cellS))),cw=W/cols,ch=H/rows,cracks=[];
+  function inkAt(x,y){const ix=Math.round(x*DPR),iy=Math.round(y*DPR);if(ix<0||iy<0||ix>=OW||iy>=OH)return false;return oi[(iy*OW+ix)*4+3]>25}
+  const cells=[],pieces=[];
+  for(let j=0;j<rows;j++){cells[j]=[];for(let i=0;i<cols;i++){const x0=i*cw,y0=j*ch;
+    const inked=inkAt(x0+cw*0.5,y0+ch*0.5)||inkAt(x0+cw*0.2,y0+ch*0.2)||inkAt(x0+cw*0.8,y0+ch*0.8)||inkAt(x0+cw*0.8,y0+ch*0.2)||inkAt(x0+cw*0.2,y0+ch*0.8);
+    const c={x0,y0,cx:x0+cw*0.5,cuts:0,fell:false,landed:false,x:0,y:0,vx:0,vy:0,rot:0,vr:0,inked};
+    cells[j][i]=c;if(inked)pieces.push(c);
+  }}
+  const THRESH=4,floorH=new Float32Array(cols);
+  function detach(c){if(c.fell)return;c.fell=true;c.vx=rnd(0.9,-0.9);c.vy=rnd(0.3,-0.7);c.vr=rnd(0.07,-0.07)}
+  function cutAt(x,y){if(x<0||y<0||x>=W||y>=H)return;const i=Math.floor(x/cw),j=Math.floor(y/ch);if(i<0||j<0||i>=cols||j>=rows)return;const c=cells[j][i];if(c&&c.inked&&!c.fell){c.cuts++;if(c.cuts>=THRESH)detach(c)}}
+  function cutLine(x0,y0,x1,y1){cracks.push([x0,y0,x1,y1]);if(cracks.length>4500)cracks.shift();const d=Math.hypot(x1-x0,y1-y0),st=Math.max(1,Math.ceil(d/(cw*0.5)));for(let k=0;k<=st;k++)cutAt(x0+(x1-x0)*k/st,y0+(y1-y0)*k/st)}
+  const onClick=()=>{const live=pieces.filter(c=>!c.fell);if(!live.length)return;/* a click drops one or two random cuts into the letters */
+    for(let n=0;n<2;n++){const c=pick(live),a=rnd(6.283),len=cw*rnd(5,3),mx=c.x0+cw*0.5,my=c.y0+ch*0.5;cutLine(mx-Math.cos(a)*len/2,my-Math.sin(a)*len/2,mx+Math.cos(a)*len/2,my+Math.sin(a)*len/2)}};
   stage.addEventListener("click",onClick);
+  let raf,lx=px,ly=sy();
   (function loop(){
-    if(pactive&&(px!==lx||sy()!==ly)){cracks.push([lx,ly,px,sy()]);if(cracks.length>2400)cracks.shift();/* follow every move so slow, careful cuts land precisely */
-      if(onInk(px,sy())){const s=shards[Math.max(0,Math.min(rows-1,Math.floor(sy()/gh)))*cols+Math.max(0,Math.min(cols-1,Math.floor(px/gw)))];if(s&&s.home)s.cracked=true}}
+    if(pactive&&(px!==lx||sy()!==ly))cutLine(lx,ly,px,sy());/* the cut follows the cursor exactly; cells cut enough times break off */
     lx=px;ly=sy();
-    cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);/* gaps stay transparent — the stage bg shows through */
-    for(const s of shards){if(!s.home){s.vy+=0.4;s.x+=s.vx;s.y+=s.vy;s.rot+=s.vr;
-        if(s.cy+s.y>H-6){s.y=H-6-s.cy;s.vy*=-0.25;s.vx*=0.7;s.vr*=0.85}}/* fallen shards settle at the bottom and stay */
-      cx.save();cx.translate(s.cx+s.x,s.cy+s.y);cx.rotate(s.rot);cx.translate(-s.cx,-s.cy);
-      cx.beginPath();cx.moveTo(s.P[0][0],s.P[0][1]);for(let k=1;k<4;k++)cx.lineTo(s.P[k][0],s.P[k][1]);cx.closePath();cx.clip();
-      cx.drawImage(off,0,0,off.width,off.height,0,0,W,H);cx.restore()}
-    if(cracks.length){cx.globalCompositeOperation="source-atop";cx.strokeStyle=pal.bg;cx.lineWidth=1.5;cx.lineCap="round";cx.lineJoin="round";cx.beginPath();/* sharp cut exactly along the cursor path — source-atop keeps it on the letters */
-      for(const c of cracks){cx.moveTo(c[0],c[1]);cx.lineTo(c[2],c[3])}
-      cx.stroke();cx.globalCompositeOperation="source-over"}
+    cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
+    for(const c of pieces){if(!c.fell||c.landed)continue;/* physics only for pieces still falling */
+      c.vy+=0.4;c.x+=c.vx;c.y+=c.vy;c.rot+=c.vr;c.vx*=0.99;
+      const bin=Math.max(0,Math.min(cols-1,Math.floor((c.cx+c.x)/cw))),floorY=H-floorH[bin];
+      if(c.y0+ch+c.y>=floorY){c.y=floorY-ch-c.y0;c.vx=0;c.vy=0;c.vr=0;c.landed=true;floorH[bin]=Math.min(H*0.42,floorH[bin]+ch*0.34)}}
+    cx.drawImage(off,0,0,OW,OH,0,0,W,H);/* the intact letters — clean */
+    if(cracks.length){cx.globalCompositeOperation="source-atop";cx.strokeStyle=pal.bg;cx.lineWidth=1.6;cx.lineCap="round";cx.lineJoin="round";cx.beginPath();
+      for(const c of cracks){cx.moveTo(c[0],c[1]);cx.lineTo(c[2],c[3])}cx.stroke();cx.globalCompositeOperation="source-over"}
+    cx.globalCompositeOperation="destination-out";for(const c of pieces)if(c.fell)cx.fillRect(c.x0-0.6,c.y0-0.6,cw+1.2,ch+1.2);cx.globalCompositeOperation="source-over";/* holes where pieces broke off */
+    for(const c of pieces)if(c.fell){cx.save();cx.translate(c.x0+cw*0.5+c.x,c.y0+ch*0.5+c.y);cx.rotate(c.rot);cx.drawImage(off,c.x0*DPR,c.y0*DPR,cw*DPR,ch*DPR,-cw*0.5,-ch*0.5,cw,ch);cx.restore()}/* fallen bits */
     raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick)};
 }},
@@ -800,7 +809,8 @@ const MODES=[
       lines.push(row);
     }
   }
-  page();
+  page();let alive=true;
+  if(document.fonts&&document.fonts.load){try{document.fonts.load(`${fo.w} 24px ${fo.f}`).then(()=>{if(alive)page()});}catch(e){}}/* re-measure once the web font is truly ready — else words pack together with fallback metrics */
   let raf,lx=px,ly=sy();
   (function loop(){const mx=px,my=sy();
     if(pdown){const dx=mx-lx,dy=my-ly,dd=Math.hypot(dx,dy);if(dd>0.5){const steps=Math.max(1,Math.ceil(dd/5)),ang=Math.atan2(dy,dx);
@@ -816,7 +826,7 @@ const MODES=[
     cx.globalAlpha=1;
     cx.setTransform(1,0,0,1,0,0);cx.drawImage(red,0,0);cx.setTransform(DPR,0,0,DPR,0,0);/* hand-drawn redaction lines on top */
     raf=requestAnimationFrame(loop)})();
-  return ()=>{cancelAnimationFrame(raf);};
+  return ()=>{alive=false;cancelAnimationFrame(raf);};
 }},
 {id:"BLOOM",tip:"Touch the letters and watch them bloom · Click to clear & recolour",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
