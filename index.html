@@ -24,6 +24,7 @@ body{background:var(--bg);color:var(--fg);cursor:none;
   transition:background .5s,border-color .5s}
 .mq-track{display:inline-flex;white-space:nowrap;will-change:transform;animation:mq 34s linear infinite}
 .mq-track span{font-size:14px;letter-spacing:.16em;text-transform:uppercase;padding:0 1.25em;color:var(--fg)}
+.mq-track .sep{padding:0 .1em;opacity:.5;letter-spacing:0;font-size:.9em}
 @keyframes mq{to{transform:translateX(-50%)}}
 
 #bar{position:fixed;bottom:0;left:0;right:0;height:34px;z-index:40;overflow:hidden;
@@ -121,7 +122,8 @@ document.getElementById("date").textContent=
 
 /* marquee content from the JD */
 const MQ=["Marc Kimmel","Design Director, Whisk @ Samsung","Experiences That Enrich & Elevate Daily Life","Building & Leading Global Teams","Prototyping AI-First Experiences","Customer Insights & Behavioural Science","Solve Problems, Tell Stories, Build Momentum"];
-document.getElementById("mqt").innerHTML=[0,1].map(()=>MQ.map(s=>`<span>${s} ↘</span>`).join("")).join("");
+const SEP=["✦","☺︎","•","✈︎","❋","◆","✷"];/* unique little monotone separators, one per statement */
+document.getElementById("mqt").innerHTML=[0,1].map(()=>MQ.map((s,i)=>`<span>${s}</span><span class="sep">${SEP[i%SEP.length]}</span>`).join("")).join("");
 
 /* ---- palettes: mostly high-contrast mono, occasional single accent ---- */
 const PALS=[
