@@ -121,8 +121,8 @@ document.getElementById("date").textContent=
   new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}).toUpperCase();
 
 /* marquee content from the JD */
-const MQ=["Marc Kimmel","Design Director, Whisk @ Samsung","Experiences That Enrich & Elevate Daily Life","Building & Leading Global Teams","Prototyping AI-First Experiences","Customer Insights & Behavioural Science","Solve Problems, Tell Stories, Build Momentum"];
-const SEP=["✦","☺︎","•","✈︎","❋","◆","✷"];/* unique little monotone separators, one per statement */
+const MQ=["Marc Kimmel","Design Director, Whisk @ Samsung","Experiences That Enrich & Elevate Daily Life","Building & Leading Global Teams","Prototyping AI-First Experiences","Customer Insights & Behavioural Science","Solve Problems, Tell Stories, Build Momentum","Happiest in a Garden or on a Mountain"];
+const SEP=["✦","☺︎","•","✈︎","❋","◆","✷","❄︎"];/* unique little monotone separators, one per statement */
 document.getElementById("mqt").innerHTML=[0,1].map(()=>MQ.map((s,i)=>`<span>${s}</span><span class="sep">${SEP[i%SEP.length]}</span>`).join("")).join("");
 
 /* ---- palettes: mostly high-contrast mono, occasional single accent ---- */
