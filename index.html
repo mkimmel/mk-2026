@@ -19,11 +19,11 @@ body{background:var(--bg);color:var(--fg);cursor:none;
   transition:background .5s ease,color .5s ease}
 
 /* ---- structural chrome (persists across versions) ---- */
-#marquee{position:fixed;top:0;left:0;right:0;height:34px;z-index:40;overflow:hidden;
+#marquee{position:fixed;top:0;left:0;right:0;height:46px;z-index:40;overflow:hidden;
   display:flex;align-items:center;border-bottom:2px solid var(--fg);background:var(--bg);
   transition:background .5s,border-color .5s}
 .mq-track{display:inline-flex;white-space:nowrap;will-change:transform;animation:mq 34s linear infinite}
-.mq-track span{font-size:12px;letter-spacing:.16em;text-transform:uppercase;padding:0 1.1em;color:var(--fg)}
+.mq-track span{font-size:14px;letter-spacing:.16em;text-transform:uppercase;padding:0 1.25em;color:var(--fg)}
 @keyframes mq{to{transform:translateX(-50%)}}
 
 #bar{position:fixed;bottom:0;left:0;right:0;height:34px;z-index:40;overflow:hidden;
@@ -41,11 +41,11 @@ body{background:var(--bg);color:var(--fg);cursor:none;
 #next:active{transform:scale(.94)}
 #readout{flex:1;min-width:0;opacity:.7;text-align:center;overflow:hidden;text-overflow:ellipsis}
 
-#grid{position:fixed;inset:34px 0;z-index:6;pointer-events:none;mix-blend-mode:difference;opacity:.12;
+#grid{position:fixed;inset:46px 0 34px;z-index:6;pointer-events:none;mix-blend-mode:difference;opacity:.12;
   background:repeating-linear-gradient(90deg,transparent 0,transparent calc(16.666% - 1px),#fff calc(16.666% - 1px),#fff 16.666%)}
 
 /* ---- stage where each mode mounts ---- */
-#stage{position:fixed;inset:34px 0;z-index:10;overflow:hidden;isolation:isolate;background:var(--bg);
+#stage{position:fixed;inset:46px 0 34px;z-index:10;overflow:hidden;isolation:isolate;background:var(--bg);
   touch-action:none;transition:background .5s}
 #stage.inverted{filter:invert(1)}
 
@@ -78,18 +78,18 @@ canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 #cursor.BLOOM,#cursor.NEON{width:16px;height:16px;margin:-8px 0 0 -8px}
 #cursor.PINBALL{opacity:0}
 #cursor.REDACT{width:16px;height:44px;margin:-22px 0 0 -8px}
-#cursor.REDACT .ring{border-radius:3px;background:var(--fg);border:none;mix-blend-mode:normal;opacity:.9}
+#cursor.REDACT .ring{border-radius:46%;background:var(--fg);border:none;mix-blend-mode:normal;opacity:.7}
 
 @media (prefers-reduced-motion:reduce){.mq-track{animation:none}}
 
 /* ---- small screens: declutter the bar, grow the tap target ---- */
 @media (max-width:640px){
   #readout,.geo{display:none}
-  #marquee{height:calc(34px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
-  #bar{height:calc(56px + env(safe-area-inset-bottom));padding:0 16px env(safe-area-inset-bottom);
+  #marquee{height:calc(46px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
+  #bar{height:calc(76px + env(safe-area-inset-bottom));padding:0 16px env(safe-area-inset-bottom);
     font-size:11px;gap:12px}
   .bl{font-size:11px}
-  #next{padding:12px 22px;font-size:13px;letter-spacing:.14em;border-width:2px}
+  #next{padding:17px 32px;font-size:16px;letter-spacing:.14em;border-width:2px}
 }
 /* ---- touch devices: no fake cursor, taps drive the button ---- */
 @media (pointer:coarse) and (hover:none){
@@ -108,14 +108,14 @@ canvas.play{position:absolute;inset:0;width:100%;height:100%;display:block}
 <footer id="bar">
   <span class="bl">mkimmel@gmail.com</span>
   <span id="readout">—</span>
-  <span class="right"><span id="next" role="button" tabindex="0" aria-label="Next mode">NEXT ↘</span><span class="geo">Vancouver · <span id="date">—</span></span></span>
+  <span class="right"><span id="next" role="button" tabindex="0" aria-label="Next mode">NEXT →</span><span class="geo">Vancouver · <span id="date">—</span></span></span>
 </footer>
 
 <script>
 const stage=document.getElementById("stage"),cursorEl=document.getElementById("cursor"),
       readout=document.getElementById("readout"),body=document.body;
 const reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
-let W=innerWidth,H=innerHeight-68,DPR=Math.min(2,devicePixelRatio||1);
+let W=innerWidth,H=innerHeight-80,DPR=Math.min(2,devicePixelRatio||1);
 
 document.getElementById("date").textContent=
   new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}).toUpperCase();
@@ -174,7 +174,7 @@ function ptrLoop(){pspeed=pspeed*0.75+Math.hypot(px-ppx,py-ppy)*0.25;ppx=px;ppy=
   requestAnimationFrame(ptrLoop)}
 ptrLoop();
 /* stage-local pointer (y within stage, which starts 34px down) */
-const sy=()=>py-34;
+const sy=()=>py-46;
 
 function sizeCanvas(cv){cv.width=W*DPR;cv.height=H*DPR}
 function fitScale(ctx,txt,target){const w=ctx.measureText(txt).width;return w>0?target/w:1}
@@ -592,7 +592,7 @@ const MODES=[
   words.forEach(([wd,cy])=>{const L=wd.length,cw=W*0.86/L,x0=W*0.07,lw=cw*0.55;
     for(let i=0;i<L;i++){const g=GLY[wd[i]],cellx=x0+cw*i+(cw-lw)/2,pts=g.map(p=>{const X=cellx+p[0]*lw,Y=cy+(p[1]-0.5)*lh;return{x:X,y:Y,hx:X,hy:Y}});letters.push({pts});pts.forEach(p=>nodes.push(p))}});
   let grabbed=null,downGrabbed=false,raf;
-  const onDown=()=>{let best=null,bd=24;for(const n of nodes){const d=Math.hypot(n.x-px,n.y-sy());if(d<bd){bd=d;best=n}}grabbed=best;downGrabbed=!!best};
+  const onDown=()=>{let best=null,bd=Math.max(52,H*0.07);for(const n of nodes){const d=Math.hypot(n.x-px,n.y-sy());if(d<bd){bd=d;best=n}}grabbed=best;downGrabbed=!!best};/* generous invisible hit area so points are easy to grab/tap */
   const onClick=()=>{if(!downGrabbed)for(const n of nodes){n.x=n.hx;n.y=n.hy}};/* click empty space to snap all letters back to shape */
   stage.addEventListener("pointerdown",onDown);stage.addEventListener("click",onClick);
   (function loop(){
@@ -779,7 +779,7 @@ const MODES=[
 }},
 {id:"REDACT",tip:"Hover a black bar to reveal the name · Drag to black out more",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
-  const paper="#E7E1D0",ink="#2B2822",bar="#0B0B0B",ff=fo.f.replace(/'/g,"");
+  const paper="#E7E1D0",ink="#221F1A",faint="#A19B8E",bar="#0B0B0B",ff=fo.f.replace(/'/g,"");
   body.style.setProperty("--bg",paper);body.style.setProperty("--fg",ink);
   const BANK="type form grid layout space margin folio serif weight kern proof ink paper leaf index print volume edition scale rhythm system order line rule void mark node craft signal motion depth field frame plane axis tone subject file record notice memo witness exhibit clause".split(" ");
   const red=document.createElement("canvas");red.width=W*DPR;red.height=H*DPR;const rcx=red.getContext("2d");rcx.setTransform(DPR,0,0,DPR,0,0);
@@ -787,10 +787,9 @@ const MODES=[
   function page(){rcx.clearRect(0,0,W,H);lines=[];reds=[];
     const fs=Math.max(13,Math.min(26,H*0.032)),lh=fs*1.7,mL=W*0.06,top=H*0.1,maxY=H*0.92,sp=fs*0.5;
     cx.font=`500 ${fs}px ${ff},serif`;
-    const nLines=Math.max(7,Math.floor((maxY-top)/lh)),order=Math.random()<0.5?["MARC","KIMMEL"]:["KIMMEL","MARC"];
-    let la=1+Math.floor(rnd(nLines-2)),lb;do{lb=1+Math.floor(rnd(nLines-2));}while(lb===la&&nLines>3);
+    const nLines=Math.max(7,Math.floor((maxY-top)/lh));
     for(let li=0;li<nLines;li++){const y=top+li*lh;let x=mL;const row=[];
-      const nm=li===la?order[0]:li===lb?order[1]:null,at=nm?Math.floor(rnd(6,1)):-1;let placed=false,wi=0;
+      const nm=(li>0&&Math.random()<0.45)?pick(["MARC","KIMMEL"]):null,at=nm?Math.floor(rnd(6,1)):-1;let placed=false,wi=0;/* the name is redacted many times across the page */
       while(x<W-mL){let w,isName=false;
         if(nm&&wi===at&&!placed){w=nm;isName=true;placed=true;}else w=pick(BANK);
         const wpx=cx.measureText(w).width;if(x+wpx>W-mL)break;
@@ -803,21 +802,24 @@ const MODES=[
   page();
   let raf,lx=px,ly=sy();
   (function loop(){const mx=px,my=sy();
-    if(pdown&&(Math.abs(mx-lx)+Math.abs(my-ly))>0.5){rcx.strokeStyle=bar;rcx.lineWidth=24;rcx.lineCap="round";rcx.lineJoin="round";rcx.beginPath();rcx.moveTo(lx,ly);rcx.lineTo(mx,my);rcx.stroke();}/* press & drag to draw black redaction lines */
+    if(pdown){const dx=mx-lx,dy=my-ly,dd=Math.hypot(dx,dy);if(dd>0.5){const steps=Math.max(1,Math.ceil(dd/5)),ang=Math.atan2(dy,dx);
+      for(let s=1;s<=steps;s++){const t=s/steps,ex=lx+dx*t,ey=ly+dy*t;rcx.save();rcx.translate(ex,ey);rcx.rotate(ang+(Math.random()-0.5)*0.25);
+        rcx.globalAlpha=0.5+Math.random()*0.22;rcx.fillStyle=bar;rcx.beginPath();rcx.ellipse(0,0,15+Math.random()*4,8+Math.random()*2,0,0,7);rcx.fill();rcx.restore();}
+      rcx.globalAlpha=1;}}/* press & drag → a semi-opaque, slightly uneven oval marker stroke */
     lx=mx;ly=my;
     for(const r of reds){const over=!pdown&&mx>=r.x-4&&mx<=r.x+r.wpx+4&&my>=r.y-r.fs*0.82&&my<=r.y+r.fs*0.22;r.reveal+=((over?1:0)-r.reveal)*0.14;}/* hover (no press) fades the bar away, back to black on leave */
     cx.setTransform(1,0,0,1,0,0);cx.fillStyle=paper;cx.fillRect(0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
-    cx.textAlign="left";cx.textBaseline="alphabetic";cx.fillStyle=ink;
-    for(const row of lines)for(const wd of row){cx.font=`500 ${wd.fs}px ${ff},serif`;cx.fillText(wd.w,wd.x,wd.y);}
+    cx.textAlign="left";cx.textBaseline="alphabetic";
+    for(const row of lines)for(const wd of row){cx.fillStyle=wd.isName?ink:faint;cx.font=`500 ${wd.fs}px ${ff},serif`;cx.fillText(wd.w,wd.x,wd.y);}
     for(const r of reds){cx.globalAlpha=Math.max(0,1-r.reveal);cx.fillStyle=bar;cx.fillRect(r.x-3,r.y-r.fs*0.82,r.wpx+6,r.fs);}
     cx.globalAlpha=1;
     cx.setTransform(1,0,0,1,0,0);cx.drawImage(red,0,0);cx.setTransform(DPR,0,0,DPR,0,0);/* hand-drawn redaction lines on top */
     raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);};
 }},
-{id:"BLOOM",tip:"Move to seed the growth · Click to reseed & recolour",mount(pal,fo){
+{id:"BLOOM",tip:"Hover over the letters to bloom them · Click to clear & recolour",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
-  const gw=Math.max(90,Math.min(160,Math.round(W/7))),gh=Math.max(50,Math.round(gw*H/W)),N=gw*gh,sc=gw/W,ff=fo.f.replace(/'/g,"");
+  const gw=Math.max(120,Math.min(240,Math.round(W/6))),gh=Math.max(70,Math.round(gw*H/W)),N=gw*gh,sc=gw/W,ff=fo.f.replace(/'/g,"");
   let A=new Float32Array(N),B=new Float32Array(N),tA=new Float32Array(N),tB=new Float32Array(N);A.fill(1);tA.fill(1);
   const mc=document.createElement("canvas");mc.width=gw;mc.height=gh;const mctx=mc.getContext("2d");
   mctx.fillStyle="#000";mctx.fillRect(0,0,gw,gh);mctx.fillStyle="#fff";mctx.textAlign="center";mctx.textBaseline="alphabetic";
@@ -826,13 +828,15 @@ const MODES=[
   mctx.save();mctx.translate(gw/2,H*0.44*sc);mctx.scale(fit("MARC",W*0.94*sc),1);mctx.fillText("MARC",0,0);mctx.restore();
   mctx.save();mctx.translate(gw/2,H*0.95*sc);mctx.scale(fit("KIMMEL",W*0.94*sc),1);mctx.fillText("KIMMEL",0,0);mctx.restore();
   const md=mctx.getImageData(0,0,gw,gh).data,mask=new Uint8Array(N);for(let i=0;i<N;i++)mask[i]=md[i*4]>120?1:0;
+  const crisp=nameCanvas(fo,"#fff");/* full-res mask → crisp letter edges */
+  const comp=document.createElement("canvas");comp.width=W*DPR;comp.height=H*DPR;const kx=comp.getContext("2d");
   const hx=h=>{h=h.replace("#","");return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];};
   const mix=(h1,h2,t)=>{const a=hx(h1),b=hx(h2);return[Math.round(a[0]+(b[0]-a[0])*t),Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t)];};
   const ACC=["#FF3B3B","#2FE8D5","#FFD23F","#B14BF4","#FF5AF2","#C6FF00","#3D6BFF","#00E1D4"],PARM=[[0.055,0.062],[0.0367,0.0649],[0.058,0.065],[0.039,0.058],[0.062,0.061]];
   let feed=0.055,kill=0.062,c0=hx(pal.bg),c1=hx(pal.bg),c2=hx(pick(ACC)),c3=hx(pal.fg);
   function look(){const p=pick(PARM);feed=p[0];kill=p[1];c1=hx(pal.bg);c2=hx(pick(ACC));c3=hx(pal.fg);}
   function seed(){A.fill(1);B.fill(0);let placed=0,tries=0;while(placed<26&&tries<5000){tries++;const gx=Math.floor(rnd(gw)),gy=Math.floor(rnd(gh)),i=gy*gw+gx;if(mask[i]){for(let yy=-2;yy<=2;yy++)for(let xx=-2;xx<=2;xx++){const j=(gy+yy)*gw+(gx+xx);if(j>=0&&j<N)B[j]=1;}placed++;}}}
-  look();seed();
+  look();/* start empty — nothing blooms until the cursor hovers */
   const off=document.createElement("canvas");off.width=gw;off.height=gh;const octx=off.getContext("2d"),img=octx.createImageData(gw,gh),id=img.data;
   function step(){for(let y=1;y<gh-1;y++)for(let x=1;x<gw-1;x++){const i=y*gw+x;if(!mask[i]){tA[i]=1;tB[i]=0;continue;}
     const a=A[i],b=B[i];
@@ -842,18 +846,20 @@ const MODES=[
     tA[i]=na<0?0:na>1?1:na;tB[i]=nb<0?0:nb>1?1:nb;}
     let s;s=A;A=tA;tA=s;s=B;B=tB;tB=s;
   }
-  const onClick=()=>{look();seed();};stage.addEventListener("click",onClick);
+  const onClick=()=>{look();A.fill(1);B.fill(0);};stage.addEventListener("click",onClick);/* clear back to empty + new palette; re-bloom by hovering */
   let raf;
   (function loop(){
-    if(pactive){const gx=Math.round(px*sc),gy=Math.round(sy()*sc);for(let yy=-2;yy<=2;yy++)for(let xx=-2;xx<=2;xx++){const X=gx+xx,Y=gy+yy;if(X>=0&&X<gw&&Y>=0&&Y<gh){const j=Y*gw+X;if(mask[j])B[j]=0.9;}}}
-    step();step();
-    for(let i=0;i<N;i++){const p=i*4;if(!mask[i]){id[p]=c0[0];id[p+1]=c0[1];id[p+2]=c0[2];id[p+3]=255;continue;}
-      let v=B[i]*2.4;if(v>1)v=1;let r,g,bl;
-      if(v<0.5){const t=v/0.5;r=c1[0]+(c2[0]-c1[0])*t;g=c1[1]+(c2[1]-c1[1])*t;bl=c1[2]+(c2[2]-c1[2])*t;}
-      else{const t=(v-0.5)/0.5;r=c2[0]+(c3[0]-c2[0])*t;g=c2[1]+(c3[1]-c2[1])*t;bl=c2[2]+(c3[2]-c2[2])*t;}
-      id[p]=r;id[p+1]=g;id[p+2]=bl;id[p+3]=255;}
+    if(pactive){const gx=Math.round(px*sc),gy=Math.round(sy()*sc);for(let yy=-3;yy<=3;yy++)for(let xx=-3;xx<=3;xx++){const X=gx+xx,Y=gy+yy;if(X>=0&&X<gw&&Y>=0&&Y<gh){const j=Y*gw+X;if(mask[j]){B[j]=1;A[j]=0.12;}}}}/* a strong kick so the reaction takes hold and spreads */
+    step();step();step();step();step();
+    for(let i=0;i<N;i++){const p=i*4;const b=B[i];
+      if(!mask[i]||b<0.05){id[p+3]=0;continue;}/* transparent until the reaction reaches here → crisp spreading front */
+      const c=b<0.20?c3:b<0.32?c2:c1;/* hard bands: fg body, accent veins, dark channels → crisp coral, not a fade */
+      id[p]=c[0];id[p+1]=c[1];id[p+2]=c[2];id[p+3]=255;}
     octx.putImageData(img,0,0);
-    cx.setTransform(1,0,0,1,0,0);cx.imageSmoothingEnabled=true;cx.clearRect(0,0,cv.width,cv.height);cx.drawImage(off,0,0,gw,gh,0,0,cv.width,cv.height);cx.setTransform(DPR,0,0,DPR,0,0);
+    kx.setTransform(1,0,0,1,0,0);kx.globalCompositeOperation="source-over";kx.clearRect(0,0,comp.width,comp.height);
+    kx.imageSmoothingEnabled=false;kx.drawImage(off,0,0,gw,gh,0,0,comp.width,comp.height);/* crisp cellular coral, not a blur */
+    kx.globalCompositeOperation="destination-in";kx.imageSmoothingEnabled=true;kx.drawImage(crisp,0,0);kx.globalCompositeOperation="source-over";/* trim to crisp letter edges */
+    cx.setTransform(1,0,0,1,0,0);cx.fillStyle=pal.bg;cx.fillRect(0,0,cv.width,cv.height);cx.imageSmoothingEnabled=true;cx.drawImage(comp,0,0);cx.setTransform(DPR,0,0,DPR,0,0);
     raf=requestAnimationFrame(loop)})();
   return ()=>{cancelAnimationFrame(raf);stage.removeEventListener("click",onClick);};
 }},
@@ -893,9 +899,9 @@ const MODES=[
 {id:"PINBALL",tip:"Nudge the ball with your paddle · Click to launch another",mount(pal,fo){
   stage.innerHTML=`<canvas class="play"></canvas>`;const cv=stage.querySelector(".play"),cx=cv.getContext("2d");sizeCanvas(cv);
   const ff=fo.f.replace(/'/g,""),BALLC=["#FF3B3B","#2FE8D5","#FFD23F","#B14BF4","#FF5AF2","#C6FF00","#3D6BFF","#FF6A00"];
-  const words=["MARC","KIMMEL"],bump=[],rowH=H*0.30,gapR=H*0.04,topR=(H-(2*rowH+gapR))/2;
-  words.forEach((word,ri)=>{const n=word.length,cw=W*0.82/n,x0=(W-cw*n)/2+cw/2,cy=topR+ri*(rowH+gapR)+rowH*0.5,r=Math.min(cw*0.4,rowH*0.34);
-    for(let i=0;i<n;i++)bump.push({x:x0+cw*i,y:cy,r,ch:word[i],flash:0});});
+  const words=["MARC","KIMMEL"],bump=[],rowH=H*0.32,gapR=H*0.05,topR=(H-(2*rowH+gapR))/2;
+  words.forEach((word,ri)=>{const n=word.length,cw=W*0.92/n,x0=(W-cw*n)/2+cw/2,cy=topR+ri*(rowH+gapR)+rowH*0.5,r=Math.min(cw*0.33,rowH*0.3);
+    for(let i=0;i<n;i++)bump.push({x:x0+cw*i+rnd(cw*0.09,-cw*0.09),y:cy+rnd(rowH*0.2,-rowH*0.2),r:r*rnd(1.12,0.86),ch:word[i],flash:0});});/* wider spread + staggered, slightly random placement & size */
   const balls=[],pr=Math.max(26,H*0.045);let ppx=px,ppy=sy();
   function launch(){if(balls.length>8)balls.shift();balls.push({x:px||W/2,y:sy()||H*0.8,vx:rnd(4,-4),vy:-rnd(9,6),r:Math.max(9,H*0.016),col:pick(BALLC)});}
   launch();
@@ -936,7 +942,7 @@ function transition(){
  else{stage.animate([{clipPath:"circle(0% at 50% 50%)"},{clipPath:"circle(85% at 50% 50%)"}],{duration:620,easing:"cubic-bezier(.7,0,.25,1)"})}
 }
 function build(step){
- W=innerWidth;H=innerHeight-68;DPR=Math.min(2,devicePixelRatio||1);
+ W=innerWidth;H=innerHeight-80;DPR=Math.min(2,devicePixelRatio||1);
  if(cleanup)cleanup();
  stage.classList.remove("inverted");
  idx=(idx+1)%1000;
